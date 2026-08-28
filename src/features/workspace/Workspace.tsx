@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import {
   Activity,
   AlertCircle,
@@ -24,10 +24,9 @@ import {
   Wrench,
   type LucideIcon,
 } from "lucide-react";
-import type { ModelOffer } from "../catalog/catalogData";
+import { getAccessFlow, type WorkspaceSection } from "../../domain/accessPolicy";
+import type { CatalogSelection } from "../../domain/catalog";
 import "./workspace.css";
-
-type WorkspaceSection = "overview" | "routing" | "sources" | "deployments" | "environment" | "billing" | "account";
 
 const NAV: { id: WorkspaceSection; label: string; icon: LucideIcon }[] = [
   { id: "overview", label: "总览", icon: Activity },
@@ -39,13 +38,18 @@ const NAV: { id: WorkspaceSection; label: string; icon: LucideIcon }[] = [
   { id: "account", label: "账户", icon: CircleUserRound },
 ];
 
-export function Workspace({ pendingOffer, onBrowseModels }: { pendingOffer: ModelOffer | null; onBrowseModels: () => void }) {
-  const [section, setSection] = useState<WorkspaceSection>(pendingOffer ? "routing" : "overview");
+export function Workspace({
+  section,
+  pendingSelection,
+  onNavigate,
+  onBrowseModels,
+}: {
+  section: WorkspaceSection;
+  pendingSelection: CatalogSelection | null;
+  onNavigate: (section: WorkspaceSection) => void;
+  onBrowseModels: () => void;
+}) {
   const [notice, setNotice] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (pendingOffer) setSection("routing");
-  }, [pendingOffer]);
 
   function act(message: string) {
     setNotice(message);
@@ -60,7 +64,7 @@ export function Workspace({ pendingOffer, onBrowseModels }: { pendingOffer: Mode
         </div>
         <nav aria-label="工作台子导航">
           {NAV.map(({ id, label, icon: Icon }) => (
-            <button key={id} type="button" data-active={section === id} onClick={() => setSection(id)}>
+            <button key={id} type="button" data-active={section === id} onClick={() => onNavigate(id)}>
               <Icon size={15} />
               <span>{label}</span>
               {id === "environment" && <small>2</small>}
@@ -74,8 +78,9 @@ export function Workspace({ pendingOffer, onBrowseModels }: { pendingOffer: Mode
       </aside>
 
       <section className="workspace-content">
-        {section === "overview" && <Overview onNavigate={setSection} />}
-        {section === "routing" && <Routing pendingOffer={pendingOffer} onBrowseModels={onBrowseModels} onAction={act} />}
+        {pendingSelection && <PendingSelection selection={pendingSelection} onAction={act} />}
+        {section === "overview" && <Overview onNavigate={onNavigate} />}
+        {section === "routing" && <Routing onBrowseModels={onBrowseModels} onAction={act} />}
         {section === "sources" && <Sources onAction={act} />}
         {section === "deployments" && <Deployments onBrowseModels={onBrowseModels} onAction={act} />}
         {section === "environment" && <Environment onAction={act} />}
@@ -85,6 +90,21 @@ export function Workspace({ pendingOffer, onBrowseModels }: { pendingOffer: Mode
 
       {notice && <div className="workspace-toast" role="status"><Check size={14} />{notice}</div>}
     </main>
+  );
+}
+
+function PendingSelection({ selection, onAction }: { selection: CatalogSelection; onAction: (message: string) => void }) {
+  const flow = getAccessFlow(selection.source.mode);
+  const actionLabel = flow.actionKind === "credential" ? "绑定凭证" : flow.actionKind === "endpoint" ? "验证端点" : flow.actionKind === "budget" ? "查看预算" : "保存并验证";
+  return (
+    <div className="pending-offer" role="status">
+      <span className="pending-icon"><Box size={17} /></span>
+      <div>
+        <strong>{selection.offer.name} · {selection.source.name}</strong>
+        <p>{selection.source.mode} · {selection.source.price} · 已从模型详情带入当前步骤</p>
+      </div>
+      <button type="button" onClick={() => onAction(`${selection.offer.name}：${actionLabel}流程已准备`)}>{actionLabel}</button>
+    </div>
   );
 }
 
@@ -142,17 +162,10 @@ function Overview({ onNavigate }: { onNavigate: (section: WorkspaceSection) => v
   );
 }
 
-function Routing({ pendingOffer, onBrowseModels, onAction }: { pendingOffer: ModelOffer | null; onBrowseModels: () => void; onAction: (message: string) => void }) {
+function Routing({ onBrowseModels, onAction }: { onBrowseModels: () => void; onAction: (message: string) => void }) {
   return (
     <>
       <PageHead kicker="ROUTING" title="路由" description="按工具管理模型映射、优先级、回退与数据策略。跨模型回退默认关闭。" action={<button className="button button-primary compact-button" type="button" onClick={onBrowseModels}>添加模型</button>} />
-      {pendingOffer && (
-        <div className="pending-offer">
-          <span className="pending-icon"><Box size={17} /></span>
-          <div><strong>{pendingOffer.name}</strong><p>{pendingOffer.offerType} · {pendingOffer.route}</p></div>
-          <button type="button" onClick={() => onAction(`${pendingOffer.name} 已保存为待验证路由`)}>保存并验证</button>
-        </div>
-      )}
       <Panel>
         <PanelHead eyebrow="PROVIDER PROFILE" title="Codex · 日常编程" action={<span className="inline-status"><i />活动中</span>} />
         <div className="route-order">

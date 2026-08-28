@@ -16,6 +16,7 @@
 10. [08-two-surface-aggregator-architecture.md](./08-two-surface-aggregator-architecture.md)：模型广场、工作台、三层供给、统一结算与供应商准入。
 11. [09-open-models-portable-workspace.md](./09-open-models-portable-workspace.md)：开放模型算力、WorkspaceProfile、MCP/Skills/Prompts/记忆/知识库与跨软件迁移。
 12. [10-frontend-architecture-and-delivery-plan.md](./10-frontend-architecture-and-delivery-plan.md)：当前前端模块、URL、状态边界、迭代阶段与发布门。
+13. [11-development-mainline.md](./11-development-mainline.md)：冻结后的产品/系统架构、供给经营策略、五条开发主线和阶段退出标准。
 
 ## 当前冻结的产品决策
 

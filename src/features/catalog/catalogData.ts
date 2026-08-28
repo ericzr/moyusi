@@ -1,36 +1,6 @@
-export type ModelModality = "语言" | "图片" | "视频";
-export type ModelKind = "闭源 API" | "开放权重";
-export type OfferType = "统一余额" | "BYOK" | "共享算力" | "专属算力" | "自有端点";
+import type { ModelOffer } from "../../domain/catalog";
 
-export type SupplyOption = {
-  name: string;
-  mode: OfferType;
-  price: string;
-  health: string;
-  note: string;
-  recommended?: boolean;
-};
-
-export type ModelOffer = {
-  id: string;
-  name: string;
-  modelId: string;
-  family: string;
-  summary: string;
-  modality: ModelModality;
-  kind: ModelKind;
-  offerType: OfferType;
-  tags: string[];
-  specLabel: string;
-  specValue: string;
-  protocol: string;
-  price: string;
-  unit: string;
-  route: string;
-  health: string;
-  meta: string;
-  sources: SupplyOption[];
-};
+// DEMO FIXTURE ONLY. Production components must read through catalogRepository.
 
 export const MODEL_OFFERS: ModelOffer[] = [
   {

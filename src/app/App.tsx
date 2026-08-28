@@ -1,10 +1,12 @@
 import { useEffect, useState } from "react";
 import { CircleUserRound, Moon, Sun, Wallet } from "lucide-react";
-import { ModelSquare } from "../features/catalog/ModelSquare";
-import type { ModelOffer } from "../features/catalog/catalogData";
+import { Navigate, Route, Routes, useLocation, useNavigate, useParams } from "react-router";
+import { getAccessFlow, isWorkspaceSection } from "../domain/accessPolicy";
+import { ModelDetailPage, ModelSquare } from "../features/catalog/ModelSquare";
 import { Workspace } from "../features/workspace/Workspace";
+import { catalogRepository } from "../services/catalogRepository";
+import { workspaceSelectionPath } from "./selectionUrl";
 
-export type ProductPage = "market" | "workspace";
 export type Theme = "light" | "dark";
 
 function readInitialTheme(): Theme {
@@ -15,8 +17,9 @@ function readInitialTheme(): Theme {
 
 export default function App() {
   const [theme, setTheme] = useState<Theme>(readInitialTheme);
-  const [page, setPage] = useState<ProductPage>("market");
-  const [pendingOffer, setPendingOffer] = useState<ModelOffer | null>(null);
+  const location = useLocation();
+  const navigate = useNavigate();
+  const productPage = location.pathname.startsWith("/workspace") ? "workspace" : "market";
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
@@ -27,18 +30,18 @@ export default function App() {
   return (
     <div className="app-shell">
       <header className="topbar">
-        <button className="brand" type="button" onClick={() => setPage("market")} aria-label="返回 Moyusi 模型广场">
+        <button className="brand" type="button" onClick={() => navigate("/market")} aria-label="返回 Moyusi 模型广场">
           <img className="brand-logo brand-logo-light" src="/brand/moyusi-light.png" alt="Moyusi" />
           <img className="brand-logo brand-logo-dark" src="/brand/moyusi-dark.png" alt="Moyusi" />
         </button>
 
         <nav className="primary-nav" aria-label="主导航">
-          <button type="button" data-active={page === "market"} onClick={() => setPage("market")}>模型广场</button>
-          <button type="button" data-active={page === "workspace"} onClick={() => { setPendingOffer(null); setPage("workspace"); }}>工作台</button>
+          <button type="button" data-active={productPage === "market"} onClick={() => navigate("/market")}>模型广场</button>
+          <button type="button" data-active={productPage === "workspace"} onClick={() => navigate("/workspace/overview")}>工作台</button>
         </nav>
 
         <div className="topbar-actions">
-          <button className="balance-button" type="button" onClick={() => { setPendingOffer(null); setPage("workspace"); }}>
+          <button className="balance-button" type="button" onClick={() => navigate("/workspace/billing")}>
             <Wallet size={14} aria-hidden="true" />
             <span>¥ 80.00</span>
           </button>
@@ -50,17 +53,54 @@ export default function App() {
           >
             {theme === "dark" ? <Sun size={16} /> : <Moon size={16} />}
           </button>
-          <button className="icon-button account-button" type="button" aria-label="账户">
+          <button className="icon-button account-button" type="button" aria-label="账户" onClick={() => navigate("/workspace/account")}>
             <CircleUserRound size={17} />
           </button>
         </div>
       </header>
 
-      {page === "market" ? (
-        <ModelSquare onOpenWorkspace={(offer) => { setPendingOffer(offer ?? null); setPage("workspace"); }} />
-      ) : (
-        <Workspace pendingOffer={pendingOffer} onBrowseModels={() => setPage("market")} />
-      )}
+      <Routes>
+        <Route path="/" element={<Navigate to="/market" replace />} />
+        <Route path="/market" element={<ModelSquare onOpenDetail={(modelId) => navigate(`/market/${modelId}`)} />} />
+        <Route path="/market/:modelId" element={<ModelDetailRoute />} />
+        <Route path="/workspace" element={<Navigate to="/workspace/overview" replace />} />
+        <Route path="/workspace/:section" element={<WorkspaceRoute />} />
+        <Route path="*" element={<Navigate to="/market" replace />} />
+      </Routes>
     </div>
+  );
+}
+
+function ModelDetailRoute() {
+  const { modelId = "" } = useParams();
+  const navigate = useNavigate();
+  return (
+    <ModelDetailPage
+      modelId={modelId}
+      onBack={() => navigate("/market")}
+      onOpenWorkspace={(selection) => navigate(workspaceSelectionPath(selection))}
+    />
+  );
+}
+
+function WorkspaceRoute() {
+  const { section } = useParams();
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  if (!isWorkspaceSection(section)) return <Navigate to="/workspace/overview" replace />;
+
+  const query = new URLSearchParams(location.search);
+  const pendingSelection = catalogRepository.resolveSelection(query.get("model"), query.get("source"));
+  const selectionSection = pendingSelection ? getAccessFlow(pendingSelection.source.mode).targetSection : null;
+  const activeSelection = selectionSection === section ? pendingSelection : null;
+
+  return (
+    <Workspace
+      section={section}
+      pendingSelection={activeSelection}
+      onNavigate={(nextSection) => navigate(`/workspace/${nextSection}${selectionSection === nextSection ? location.search : ""}`)}
+      onBrowseModels={() => navigate("/market")}
+    />
   );
 }

@@ -18,17 +18,18 @@ import {
   X,
 } from "lucide-react";
 import {
-  MODEL_OFFERS,
   type ModelKind,
   type ModelModality,
   type ModelOffer,
-  type OfferType,
+  type CatalogSelection,
   type SupplyOption,
-} from "./catalogData";
+} from "../../domain/catalog";
+import { getAccessFlow, sourceActionLabel } from "../../domain/accessPolicy";
+import { catalogRepository } from "../../services/catalogRepository";
 
 type Filter = "全部供给" | ModelKind;
 type ViewMode = "compact" | "cards";
-type AccessSelection = { offer: ModelOffer; source: SupplyOption };
+type AccessSelection = CatalogSelection;
 
 const MODALITIES: Array<{ id: ModelModality; title: string; Icon: typeof MessageSquareText }> = [
   { id: "语言", title: "语言", Icon: MessageSquareText },
@@ -41,25 +42,16 @@ const VIEWS: Array<{ id: ViewMode; label: string; Icon: typeof Rows3 }> = [
   { id: "cards", label: "卡片", Icon: LayoutGrid },
 ];
 
-export function ModelSquare({ onOpenWorkspace }: { onOpenWorkspace: (offer?: ModelOffer) => void }) {
+export function ModelSquare({ onOpenDetail }: { onOpenDetail: (modelId: string) => void }) {
   const [modality, setModality] = useState<ModelModality>("语言");
   const [filter, setFilter] = useState<Filter>("全部供给");
   const [view, setView] = useState<ViewMode>("compact");
   const [query, setQuery] = useState("");
-  const [detail, setDetail] = useState<ModelOffer | null>(null);
-  const [access, setAccess] = useState<AccessSelection | null>(null);
-
-  useEffect(() => {
-    if (detail) window.scrollTo({ top: 0, behavior: "auto" });
-  }, [detail]);
-
   const offers = useMemo(() => {
-    const normalized = query.trim().toLowerCase();
-    return MODEL_OFFERS.filter((offer) => {
-      const matchesModality = offer.modality === modality;
-      const matchesKind = filter === "全部供给" || offer.kind === filter;
-      const matchesQuery = !normalized || [offer.name, offer.modelId, offer.family, offer.summary, offer.tags.join(" ")].join(" ").toLowerCase().includes(normalized);
-      return matchesModality && matchesKind && matchesQuery;
+    return catalogRepository.list({
+      modality,
+      kind: filter === "全部供给" ? undefined : filter,
+      query,
     });
   }, [filter, modality, query]);
 
@@ -70,15 +62,6 @@ export function ModelSquare({ onOpenWorkspace }: { onOpenWorkspace: (offer?: Mod
     setFilter("全部供给");
     setQuery("");
   };
-
-  if (detail) {
-    return (
-      <main className="market-page model-detail-page">
-        <ModelDetail offer={detail} onBack={() => setDetail(null)} onChooseSource={(source) => setAccess({ offer: detail, source })} />
-        {access && <AccessDialog selection={access} onClose={() => setAccess(null)} onContinue={() => onOpenWorkspace(access.offer)} />}
-      </main>
-    );
-  }
 
   return (
     <main className="market-page">
@@ -93,7 +76,7 @@ export function ModelSquare({ onOpenWorkspace }: { onOpenWorkspace: (offer?: Mod
       <section className="market-controls" aria-label="模型筛选与视图">
         <div className="modality-switcher" aria-label="按生成类型选择模型">
           {MODALITIES.map(({ id, title, Icon }) => {
-            const count = MODEL_OFFERS.filter((offer) => offer.modality === id).length;
+            const count = catalogRepository.list({ modality: id }).length;
             return <button key={id} type="button" data-active={modality === id} onClick={() => chooseModality(id)}><Icon size={14} /><span>{title}</span><small>{count}</small></button>;
           })}
         </div>
@@ -113,10 +96,44 @@ export function ModelSquare({ onOpenWorkspace }: { onOpenWorkspace: (offer?: Mod
       <section className="catalog-section">
         <div className="catalog-meta"><span>{offers.length} 个模型 · {sourceCount} 个供给来源</span><span>报价与状态为演示数据</span></div>
         <div className="catalog-layout">
-          {view === "compact" && <CompactResults offers={offers} onOpenDetail={setDetail} />}
-          {view === "cards" && <CardResults offers={offers} onOpenDetail={setDetail} />}
+          {view === "compact" && <CompactResults offers={offers} onOpenDetail={(offer) => onOpenDetail(offer.id)} />}
+          {view === "cards" && <CardResults offers={offers} onOpenDetail={(offer) => onOpenDetail(offer.id)} />}
         </div>
       </section>
+    </main>
+  );
+}
+
+export function ModelDetailPage({
+  modelId,
+  onBack,
+  onOpenWorkspace,
+}: {
+  modelId: string;
+  onBack: () => void;
+  onOpenWorkspace: (selection: CatalogSelection) => void;
+}) {
+  const offer = catalogRepository.getById(modelId);
+  const [access, setAccess] = useState<AccessSelection | null>(null);
+
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: "auto" });
+    setAccess(null);
+  }, [modelId]);
+
+  if (!offer) {
+    return (
+      <main className="market-page model-detail-page">
+        <nav className="detail-nav" aria-label="模型详情导航"><button type="button" onClick={onBack}><ArrowLeft size={14} />返回模型广场</button></nav>
+        <div className="catalog-empty">未找到这个模型，可能已下架或链接有误。</div>
+      </main>
+    );
+  }
+
+  return (
+    <main className="market-page model-detail-page">
+      <ModelDetail offer={offer} onBack={onBack} onChooseSource={(source) => setAccess({ offer, source })} />
+      {access && <AccessDialog selection={access} onClose={() => setAccess(null)} onContinue={() => onOpenWorkspace(access)} />}
     </main>
   );
 }
@@ -196,7 +213,7 @@ function ModelDetail({ offer, onBack, onChooseSource }: { offer: ModelOffer; onB
               <span>{source.mode}</span>
               <strong className="source-price">{source.price}</strong>
               <span className="source-health"><i />{source.health}</span>
-              <button type="button" onClick={() => onChooseSource(source)}>{sourceAction(source.mode)}<ChevronRight size={12} /></button>
+              <button type="button" onClick={() => onChooseSource(source)}>{sourceActionLabel(source.mode)}<ChevronRight size={12} /></button>
             </article>
           ))}
         </div>
@@ -211,8 +228,8 @@ function ModelDetail({ offer, onBack, onChooseSource }: { offer: ModelOffer; onB
 }
 
 function AccessDialog({ selection, onClose, onContinue }: { selection: AccessSelection; onClose: () => void; onContinue: () => void }) {
-  const flow = accessFlow(selection.source.mode);
-  const FlowIcon = flow.Icon;
+  const flow = getAccessFlow(selection.source.mode);
+  const FlowIcon = flow.actionKind === "credential" ? KeyRound : flow.actionKind === "endpoint" ? Server : flow.actionKind === "budget" ? CreditCard : WalletCards;
   return (
     <div className="access-dialog-backdrop" role="presentation">
       <section className="access-dialog" role="dialog" aria-modal="true" aria-labelledby="access-dialog-title">
@@ -228,20 +245,6 @@ function AccessDialog({ selection, onClose, onContinue }: { selection: AccessSel
       </section>
     </div>
   );
-}
-
-function sourceAction(mode: OfferType) {
-  if (mode === "BYOK") return "绑定凭证";
-  if (mode === "专属算力") return "确认预算";
-  if (mode === "自有端点") return "连接端点";
-  return "选择供给";
-}
-
-function accessFlow(mode: OfferType) {
-  if (mode === "BYOK") return { title: "前往工作台绑定凭证", description: "该供给使用你的供应商账户，不经过 Moyusi 充值。", status: "外部结算", note: "Secret 只在本地授权；工作环境仅保存引用和作用域。", action: "前往工作台绑定", Icon: KeyRound };
-  if (mode === "自有端点") return { title: "前往工作台连接端点", description: "接入已有的兼容端点，不经过 Moyusi 支付。", status: "无需充值", note: "连接后先完成协议、模型身份和健康探测，再允许加入活动路由。", action: "前往工作台连接", Icon: Server };
-  if (mode === "专属算力") return { title: "先确认算力预算", description: "专属部署创建后会产生持续成本，需要单独确认。", status: "需要预算确认", note: "下一步展示最低持续成本、预计月成本、启动时间和自动休眠规则。", action: "前往工作台确认", Icon: CreditCard };
-  return { title: "确认统一余额计费", description: "配置本身不扣费，首次调用后才按实际用量结算。", status: "余额可用 · ¥ 86.40", note: "余额不足时先进入充值页；充值完成后返回当前模型与供给，不丢失选择。", action: "加入工作台", Icon: WalletCards };
 }
 
 function EmptyResults() {

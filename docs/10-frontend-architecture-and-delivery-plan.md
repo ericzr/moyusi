@@ -1,6 +1,6 @@
 # 前端产品架构与交付计划
 
-状态：首个双产品面预览已落地  
+状态：Stage 1 工程基线已启动
 日期：2026-08-28
 
 ## 1. 当前结果
@@ -65,7 +65,10 @@ public/brand/moyusi-dark.png    # 夜间模式：红色标志 + 白色字标
 ```text
 src/
 ├── app/
-│   └── App.tsx                       # 双产品面 Shell、主题与跨面跳转
+│   ├── App.tsx                       # Shell、正式路由、主题与跨面跳转
+│   └── selectionUrl.ts               # 模型供给选择的可分享工作台 URL
+├── domain/                           # Catalog、接入策略与工作台路由类型
+├── services/                         # Catalog 数据访问边界
 ├── features/
 │   ├── catalog/
 │   │   ├── ModelSquare.tsx           # 模型发现、筛选和选择
