@@ -22,12 +22,15 @@ import {
   SquareTerminal,
   Wallet,
   Wrench,
+  X,
   type LucideIcon,
 } from "lucide-react";
 import { getAccessFlow, type WorkspaceSection } from "../../domain/accessPolicy";
 import type { CatalogSelection } from "../../domain/catalog";
 import type { ActiveRoute, UsageEvent } from "../../domain/demoPlatform";
+import type { ByokProvider, MigrationOutcome, MigrationTarget } from "../../domain/portableWorkspace";
 import type { DemoPlatformController } from "./useDemoPlatform";
+import { useDemoPortableWorkspace, type DemoPortableWorkspaceController } from "./useDemoPortableWorkspace";
 import "./workspace.css";
 
 const NAV: { id: WorkspaceSection; label: string; icon: LucideIcon }[] = [
@@ -56,6 +59,7 @@ export function Workspace({
   onBrowseModels: () => void;
 }) {
   const [notice, setNotice] = useState<string | null>(null);
+  const portableWorkspace = useDemoPortableWorkspace();
 
   function act(message: string) {
     setNotice(message);
@@ -87,9 +91,9 @@ export function Workspace({
         {pendingSelection && <PendingSelection selection={pendingSelection} onActivate={onActivateSelection} onAction={act} />}
         {section === "overview" && <Overview activeRoute={platform.state.activeRoute} periodCost={platform.billing.periodCostCny} requestCount={platform.billing.requestCount} onNavigate={onNavigate} />}
         {section === "routing" && <Routing activeRoute={platform.state.activeRoute} previousRoute={platform.state.previousRoute} onBrowseModels={onBrowseModels} onSimulateCall={platform.simulateCall} onRestore={platform.restore} onAction={act} />}
-        {section === "sources" && <Sources onAction={act} />}
+        {section === "sources" && <Sources workspace={portableWorkspace} onAction={act} />}
         {section === "deployments" && <Deployments onBrowseModels={onBrowseModels} onAction={act} />}
-        {section === "environment" && <Environment onAction={act} />}
+        {section === "environment" && <Environment workspace={portableWorkspace} onAction={act} />}
         {section === "billing" && <Billing events={platform.state.usageEvents} billing={platform.billing} onAction={act} />}
         {section === "account" && <Account onAction={act} />}
       </section>
@@ -235,16 +239,48 @@ function Routing({ activeRoute, previousRoute, onBrowseModels, onSimulateCall, o
   );
 }
 
-function Sources({ onAction }: { onAction: (message: string) => void }) {
+function Sources({ workspace, onAction }: { workspace: DemoPortableWorkspaceController; onAction: (message: string) => void }) {
+  const [connectOpen, setConnectOpen] = useState(false);
+  const [provider, setProvider] = useState<ByokProvider>("OpenRouter");
+  const [connecting, setConnecting] = useState(false);
+
+  async function connect() {
+    setConnecting(true);
+    try {
+      const connection = await workspace.connectByok(provider);
+      setConnectOpen(false);
+      onAction(`${connection.provider} 已完成本机授权，Moyusi 只收到绑定状态`);
+    } catch {
+      onAction("本机授权没有完成，原有来源未改变");
+    } finally {
+      setConnecting(false);
+    }
+  }
+
   return (
     <>
       <PageHead kicker="API & SOURCES" title="模型来源" description="管理 Moyusi 余额来源和你自己的模型账号。自己的密钥只保存在本机，费用由对应平台收取。" action={<button className="button button-primary compact-button" type="button" onClick={() => onAction("调用密钥创建流程已打开；完整值只显示一次")}>创建调用密钥</button>} />
       <div className="source-grid">
         <Panel><PanelHead eyebrow="MOYUSI KEY" title="Moyusi 调用密钥" action={<span className="inline-status"><i />正常</span>} /><div className="key-display"><KeyRound size={17} /><code>moy_••••••••92F1</code><span>今天使用</span></div><SettingRow label="可用模型" value="4 个" /><SettingRow label="每月限额" value="¥ 120.00" /><SettingRow label="有效期" value="长期" /><div className="panel-footer"><span>完整密钥不会再次显示</span><button type="button" onClick={() => onAction("密钥更换流程已准备")}>更换</button></div></Panel>
-        <Panel><PanelHead eyebrow="LOCAL BYOK" title="我的模型账号" /><SourceRow name="Google AI" meta="只保存在本机 · 平台直接收费" status="已连接" /><SourceRow name="OpenRouter" meta="只保存在本机 · 平台直接收费" status="待同步" /><button className="source-add" type="button" onClick={() => onAction("模型账号连接流程已打开")}>连接新的模型账号 <ChevronRight size={13} /></button></Panel>
+        <Panel><PanelHead eyebrow="LOCAL BYOK" title="我的模型账号" /><div className="source-list">{workspace.state.connections.map((connection) => <SourceRow key={connection.id} name={connection.provider} meta={connection.scope} status={connection.state === "bound" ? "已连接" : "待授权"} />)}</div><button className="source-add" type="button" onClick={() => setConnectOpen(true)}>连接新的模型账号 <ChevronRight size={13} /></button></Panel>
       </div>
       <div className="security-note"><ShieldCheck size={17} /><div><strong>密钥不会跟随 AI 配置迁移</strong><p>切换设备或软件时只迁移非敏感设置；模型账号需要在新设备上重新确认。</p></div></div>
+      {connectOpen && <ByokDialog provider={provider} connecting={connecting} onProviderChange={setProvider} onClose={() => setConnectOpen(false)} onConnect={connect} />}
     </>
+  );
+}
+
+function ByokDialog({ provider, connecting, onProviderChange, onClose, onConnect }: { provider: ByokProvider; connecting: boolean; onProviderChange: (provider: ByokProvider) => void; onClose: () => void; onConnect: () => void }) {
+  return (
+    <div className="access-dialog-backdrop" role="presentation">
+      <section className="access-dialog byok-dialog" role="dialog" aria-modal="true" aria-labelledby="byok-dialog-title">
+        <header><div><span className="access-flow-icon"><KeyRound size={17} /></span><div><h2 id="byok-dialog-title">在本机绑定模型账号</h2><p>网页只发出一次性授权，密钥不会进入 Moyusi 或迁移包。</p></div></div><button type="button" aria-label="关闭" onClick={onClose}><X size={15} /></button></header>
+        <label className="byok-provider-field"><span>选择模型平台</span><select value={provider} onChange={(event) => onProviderChange(event.target.value as ByokProvider)} disabled={connecting}><option>Google AI</option><option>OpenRouter</option><option>Anthropic</option><option>OpenAI</option></select></label>
+        <div className="byok-steps"><span><b>01</b>生成一次性授权</span><span><b>02</b>由 Moyusi Desktop 领取</span><span><b>03</b>仅返回已绑定状态</span></div>
+        <div className="access-status"><ShieldCheck size={14} /><div><strong>演示模式：不会写入真实密钥</strong><p>完成后来源会显示为“已连接”，费用仍由所选平台直接结算。</p></div></div>
+        <footer><button type="button" onClick={onClose}>取消</button><button className="button button-primary" type="button" disabled={connecting} onClick={onConnect}>{connecting ? "正在授权…" : "模拟完成本机授权"}<ChevronRight size={13} /></button></footer>
+      </section>
+    </div>
   );
 }
 
@@ -262,11 +298,36 @@ function Deployments({ onBrowseModels, onAction }: { onBrowseModels: () => void;
   );
 }
 
-function Environment({ onAction }: { onAction: (message: string) => void }) {
+function Environment({ workspace, onAction }: { workspace: DemoPortableWorkspaceController; onAction: (message: string) => void }) {
   const [profile, setProfile] = useState<"daily" | "team">("daily");
+  const [working, setWorking] = useState(false);
+  const target: MigrationTarget = profile === "daily" ? "Claude Code" : "Codex";
+  const report = workspace.state.latestMigration?.target === target ? workspace.state.latestMigration : null;
+  const migrationRows = report?.items ?? [
+    { name: "code-review Skill", outcome: "exact" as const, detail: "内容摘要一致" },
+    { name: "release Prompt", outcome: "adapted" as const, detail: "developer role 转为目标指令层" },
+    { name: "GitHub MCP", outcome: "needs_confirm" as const, detail: "目标软件需要重新授权 repo scope" },
+    { name: "会话检查点", outcome: "rebuilt" as const, detail: "新会话继续，不恢复厂商运行时" },
+  ];
+
+  async function migrate() {
+    setWorking(true);
+    try {
+      if (!report || report.state === "applied") {
+        await workspace.previewMigration(target);
+        onAction(`${target} 的迁移差异已生成，请确认后应用`);
+      } else {
+        const applied = await workspace.applyMigration(target);
+        onAction(applied ? `${target} 的非敏感配置已应用，本机密钥仍需重新授权` : "迁移预览已过期，请重新生成");
+      }
+    } finally {
+      setWorking(false);
+    }
+  }
+
   return (
     <>
-      <PageHead kicker="PORTABLE WORKSPACE" title="AI 配置与迁移" description="统一管理 MCP 工具、Skills 技能、Prompts 提示词、记忆和知识库，并一键迁移到其他 AI 软件。" action={<button className="button button-primary compact-button" type="button" onClick={() => onAction("已生成迁移预览；确认后才会修改目标软件")}>一键迁移</button>} />
+      <PageHead kicker="PORTABLE WORKSPACE" title="AI 配置与迁移" description="统一管理 MCP 工具、Skills 技能、Prompts 提示词、记忆和知识库，并一键迁移到其他 AI 软件。" action={<button className="button button-primary compact-button" type="button" disabled={working} onClick={migrate}>{working ? "正在检查…" : !report || report.state === "applied" ? "生成迁移预览" : "确认并应用"}</button>} />
       <div className="profile-switcher">
         <button type="button" data-active={profile === "daily"} onClick={() => setProfile("daily")}><span>日常编程</span><small>v12 · 2 个目标</small></button>
         <button type="button" data-active={profile === "team"} onClick={() => setProfile("team")}><span>团队工程</span><small>v4 · 1 个目标</small></button>
@@ -283,18 +344,15 @@ function Environment({ onAction }: { onAction: (message: string) => void }) {
         </Panel>
         <Panel>
           <PanelHead eyebrow="TARGETS" title="目标软件" />
-          <MigrationTarget name="Codex" version="本机" exact="11" adapted="2" unsupported="0" status="已部署" />
-          <MigrationTarget name="Claude Code" version="本机" exact="9" adapted="3" unsupported="1" status="有更新" />
-          <div className="panel-footer"><span>账号密钥不会被迁移</span><button type="button" onClick={() => onAction("迁移前后差异已生成")}>查看迁移差异</button></div>
+          <MigrationTarget name="Codex" version="本机" exact="11" adapted="2" unsupported="0" status={target === "Codex" && report?.state === "applied" ? "已应用" : "可预览"} />
+          <MigrationTarget name="Claude Code" version="本机" exact="9" adapted="3" unsupported="1" status={target === "Claude Code" && report?.state === "applied" ? "已应用" : "可预览"} />
+          <div className="panel-footer"><span>账号密钥不会被迁移</span><button type="button" onClick={migrate}>{report && report.state === "preview" ? "查看迁移差异" : "生成迁移差异"}</button></div>
         </Panel>
       </div>
       <Panel className="migration-report">
-        <PanelHead eyebrow="LATEST MIGRATION" title="最近迁移报告" action={<span>今天 10:42</span>} />
+        <PanelHead eyebrow="LATEST MIGRATION" title={report ? `${report.target} · 迁移报告` : "迁移报告"} action={<span>{report ? (report.state === "applied" ? "已应用" : "待确认") : "尚未生成"}</span>} />
         <div className="migration-table-head"><span>资产</span><span>结果</span><span>说明</span></div>
-        <MigrationRow name="code-review Skill" result="原样" detail="内容摘要一致" />
-        <MigrationRow name="release Prompt" result="已转换" detail="developer role 转为目标指令层" />
-        <MigrationRow name="GitHub MCP" result="待确认" detail="目标软件需要重新授权 repo scope" warn />
-        <MigrationRow name="会话检查点" result="已重建" detail="新会话继续，不恢复厂商运行时" />
+        {migrationRows.map((item) => <MigrationRow key={item.name} name={item.name} result={migrationOutcomeLabel(item.outcome)} detail={item.detail} warn={item.outcome === "needs_confirm"} />)}
       </Panel>
     </>
   );
@@ -340,3 +398,4 @@ function MigrationTarget({ name, version, exact, adapted, unsupported, status }:
 function MigrationRow({ name, result, detail, warn = false }: { name: string; result: string; detail: string; warn?: boolean }) { return <div className="migration-row"><strong>{name}</strong><span data-warn={warn}>{result}</span><p>{detail}</p></div>; }
 function UsageRow({ id, model, route, tokens, latency, cost }: { id: string; model: string; route: string; tokens: string; latency: string; cost: string }) { return <div className="usage-row"><code>{id}</code><div><strong>{model}</strong><small>{route}</small></div><code>{tokens}</code><code>{latency}</code><code>{cost}</code></div>; }
 function toolLabel(route: ActiveRoute): string { return route.modality === "语言" ? "Codex" : route.modality === "图片" ? "图像工作流" : "视频工作流"; }
+function migrationOutcomeLabel(outcome: MigrationOutcome): string { return outcome === "exact" ? "原样" : outcome === "adapted" ? "已转换" : outcome === "rebuilt" ? "已重建" : "待确认"; }

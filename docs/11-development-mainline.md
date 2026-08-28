@@ -123,7 +123,7 @@ WorkspaceProfile 先覆盖 MCP、Skills 和 Prompts，再扩展经审核记忆�
 
 退出标准：不依赖生产资金和真实 Secret，也能完整演示一次可恢复的接入。
 
-当前进度：第一条“模型详情 → 统一余额/共享算力来源 → 一键切换 → 模拟调用 → 费用记录”闭环已完成；BYOK、桌面配置变更和 mock API 失败状态仍待实现。
+当前进度：第一条“模型详情 → 统一余额/共享算力来源 → 一键切换 → 模拟调用 → 费用记录”闭环已完成。BYOK 已具备一次性 ImportGrant 的 mock 授权、只保存绑定状态的本地持久化，以及不会迁移密钥的界面边界；迁移已具备“生成差异 → 用户确认 → mock 应用”的可记录流程。真实桌面安全存储、配置写入和 mock API 失败状态仍待实现。
 
 ### Stage 3：Control Plane + Desktop Alpha
 
@@ -162,11 +162,10 @@ WorkspaceProfile 先覆盖 MCP、Skills 和 Prompts，再扩展经审核记忆�
 
 下一批只做 Stage 2 的第一条纵向切片：
 
-1. 建 mock API，并加入 loading/empty/error/stale 状态；
+1. 建 typed mock API，并加入 loading/empty/error/stale 状态；
 2. 将模型与供给 fixture 移出 feature 目录，按 Catalog DTO/Domain Model 映射；
-3. 实现选中供给后的接入草稿和恢复机制；
-4. 实现平台 Key 创建演示与一次 mock 调用；
-5. 把调用结果写入用量页的 mock UsageEvent；
-6. 加一条浏览器 E2E，锁住刷新、返回、余额不足和 BYOK 分流。
+3. 让 BYOK ImportGrant 由网页与桌面 fixture 两端领取，替换浏览器 mock；
+4. 为 Codex/Claude Code 输出真实的 mock 配置 diff、确认、验证与回滚记录；
+5. 加一条浏览器 E2E，锁住刷新、返回、余额不足、BYOK 分流与迁移确认。
 
 在此闭环通过前，不开始真实充值、生产上游凭证或本机配置写入。
