@@ -1,35 +1,42 @@
 import { useMemo, useState } from "react";
 import {
-  ArrowUpRight,
   Check,
   ChevronRight,
-  CircleGauge,
   Code2,
   Cpu,
   Image as ImageIcon,
+  LayoutGrid,
   MessageSquareText,
+  Rows3,
   Search,
-  ShieldCheck,
+  TableProperties,
   Video,
 } from "lucide-react";
 import { MODEL_OFFERS, type ModelKind, type ModelModality, type ModelOffer } from "./catalogData";
 
 type Filter = "全部供给" | ModelKind;
+type ViewMode = "compact" | "cards" | "compare";
 
 const MODALITIES: Array<{
   id: ModelModality;
   title: string;
-  description: string;
   Icon: typeof MessageSquareText;
 }> = [
-  { id: "语言", title: "语言模型", description: "对话、代码、推理与文档", Icon: MessageSquareText },
-  { id: "图片", title: "图片模型", description: "生成、编辑与视觉工作流", Icon: ImageIcon },
-  { id: "视频", title: "视频模型", description: "文生视频、图生视频与运镜", Icon: Video },
+  { id: "语言", title: "语言", Icon: MessageSquareText },
+  { id: "图片", title: "图片", Icon: ImageIcon },
+  { id: "视频", title: "视频", Icon: Video },
+];
+
+const VIEWS: Array<{ id: ViewMode; label: string; Icon: typeof Rows3 }> = [
+  { id: "compact", label: "紧凑列表", Icon: Rows3 },
+  { id: "cards", label: "卡片", Icon: LayoutGrid },
+  { id: "compare", label: "对比", Icon: TableProperties },
 ];
 
 export function ModelSquare({ onOpenWorkspace }: { onOpenWorkspace: (offer?: ModelOffer) => void }) {
   const [modality, setModality] = useState<ModelModality>("语言");
   const [filter, setFilter] = useState<Filter>("全部供给");
+  const [view, setView] = useState<ViewMode>("compact");
   const [query, setQuery] = useState("");
   const [selectedId, setSelectedId] = useState(MODEL_OFFERS[0].id);
   const [prepared, setPrepared] = useState<ModelOffer | null>(null);
@@ -45,7 +52,7 @@ export function ModelSquare({ onOpenWorkspace }: { onOpenWorkspace: (offer?: Mod
   }, [filter, modality, query]);
 
   const selected = offers.find((offer) => offer.id === selectedId) ?? offers[0] ?? null;
-  const modalityMeta = MODALITIES.find((item) => item.id === modality)!;
+  const sourceCount = offers.reduce((total, offer) => total + offer.sources.length, 0);
 
   const chooseModality = (next: ModelModality) => {
     setModality(next);
@@ -57,116 +64,51 @@ export function ModelSquare({ onOpenWorkspace }: { onOpenWorkspace: (offer?: Mod
 
   return (
     <main className="market-page">
-      <section className="market-intro">
-        <div>
-          <h1>先选任务，再选模型。</h1>
-          <p>从语言、图片或视频开始，再比较闭源 API、开放权重、不同中转站与算力来源。一次接入，统一进入 Moyusi 路由和余额体系。</p>
-        </div>
-        <div className="market-intro-actions">
-          <span><ShieldCheck size={14} />来源与证据可追溯</span>
-          <button className="button button-quiet" type="button" onClick={() => onOpenWorkspace()}>查看工作台 <ArrowUpRight size={14} /></button>
-        </div>
-      </section>
+      <header className="market-header">
+        <div><h1>模型广场</h1><p>先按任务类型选模型，再比较价格、线路与算力来源。</p></div>
+        <label className="catalog-search">
+          <Search size={14} aria-hidden="true" />
+          <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="搜索模型、厂商或用途" />
+        </label>
+      </header>
 
-      <section className="modality-switcher" aria-label="按生成类型选择模型">
-        {MODALITIES.map(({ id, title, description, Icon }) => {
-          const count = MODEL_OFFERS.filter((offer) => offer.modality === id).length;
-          return (
-            <button key={id} type="button" data-active={modality === id} onClick={() => chooseModality(id)}>
-              <span className="modality-icon"><Icon size={18} /></span>
-              <span className="modality-copy"><strong>{title}</strong><small>{description}</small></span>
-              <span className="modality-count">{String(count).padStart(2, "0")}</span>
+      <section className="market-controls" aria-label="模型筛选与视图">
+        <div className="modality-switcher" aria-label="按生成类型选择模型">
+          {MODALITIES.map(({ id, title, Icon }) => {
+            const count = MODEL_OFFERS.filter((offer) => offer.modality === id).length;
+            return (
+              <button key={id} type="button" data-active={modality === id} onClick={() => chooseModality(id)}>
+                <Icon size={14} /><span>{title}</span><small>{count}</small>
+              </button>
+            );
+          })}
+        </div>
+        <div className="control-divider" />
+        <div className="filter-tabs" aria-label="按开放性筛选模型">
+          {(["全部供给", "闭源 API", "开放权重"] as Filter[]).map((item) => (
+            <button key={item} type="button" data-active={filter === item} onClick={() => setFilter(item)}>{item}</button>
+          ))}
+        </div>
+        <div className="view-switch" aria-label="切换模型呈现方式">
+          {VIEWS.map(({ id, label, Icon }) => (
+            <button key={id} type="button" aria-label={label} title={label} data-active={view === id} onClick={() => setView(id)}>
+              <Icon size={14} /><span>{label}</span>
             </button>
-          );
-        })}
+          ))}
+        </div>
       </section>
 
-      <section className="catalog-section" id="catalog">
-        <div className="catalog-heading">
-          <div>
-            <h2>{modalityMeta.title}</h2>
-            <p>{modalityMeta.description}。先看模型能力，再展开比较真实供给线路。</p>
-          </div>
-          <label className="catalog-search">
-            <Search size={15} aria-hidden="true" />
-            <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder={`搜索${modalityMeta.title}或用途`} />
-          </label>
+      <section className="catalog-section">
+        <div className="catalog-meta">
+          <span>{offers.length} 个模型 · {sourceCount} 个供给来源</span>
+          <span>报价与状态为演示数据</span>
         </div>
 
-        <div className="catalog-toolbar">
-          <div className="filter-tabs" aria-label="按开放性筛选模型">
-            {(["全部供给", "闭源 API", "开放权重"] as Filter[]).map((item) => (
-              <button key={item} type="button" data-active={filter === item} onClick={() => setFilter(item)}>{item}</button>
-            ))}
-          </div>
-          <span>{offers.length} 个模型 · 演示价格</span>
-        </div>
-
-        <div className="catalog-layout">
-          <div className="catalog-results">
-            <div className="result-header" aria-hidden="true">
-              <span>模型</span><span>供给</span><span>能力</span><span>起始价格</span><span>状态</span><span />
-            </div>
-            <div className="offer-list">
-              {offers.map((offer) => (
-                <button className="offer-row" data-selected={selected?.id === offer.id} key={offer.id} type="button" onClick={() => setSelectedId(offer.id)}>
-                  <span className="model-identity">
-                    <span className="model-glyph" aria-hidden="true">{offer.kind === "开放权重" ? <Cpu size={17} /> : <Code2 size={17} />}</span>
-                    <span>
-                      <span className="model-title-line"><strong>{offer.name}</strong><small>{offer.family}</small></span>
-                      <span className="model-summary">{offer.summary}</span>
-                      <span className="tag-row">{offer.tags.slice(0, 3).map((tag) => <i key={tag}>{tag}</i>)}</span>
-                    </span>
-                  </span>
-                  <span className="offer-fact"><small>{offer.kind}</small><strong>{offer.offerType}</strong><em>{offer.meta}</em></span>
-                  <span className="offer-fact"><small>{offer.specLabel}</small><strong>{offer.specValue}</strong><em>{offer.protocol}</em></span>
-                  <span className="offer-price"><strong>{offer.price}</strong><small>{offer.unit}</small></span>
-                  <span className="offer-health"><strong><i />{offer.health}</strong><small>24h 演示窗口</small></span>
-                  <ChevronRight className="row-arrow" size={15} />
-                </button>
-              ))}
-              {offers.length === 0 && <div className="catalog-empty">没有匹配项。尝试清除搜索或切换供给类型。</div>}
-            </div>
-          </div>
-
-          <aside className="model-inspector" aria-live="polite">
-            {selected ? (
-              <>
-                <div className="inspector-heading">
-                  <span className="model-glyph">{selected.kind === "开放权重" ? <Cpu size={18} /> : <Code2 size={18} />}</span>
-                  <div><strong>{selected.name}</strong><span>{selected.family} · {selected.kind}</span></div>
-                </div>
-                <code className="model-id">{selected.modelId}</code>
-                <p className="inspector-summary">{selected.summary}</p>
-
-                <dl className="model-specs">
-                  <div><dt>{selected.specLabel}</dt><dd>{selected.specValue}</dd></div>
-                  <div><dt>兼容协议</dt><dd>{selected.protocol}</dd></div>
-                  <div><dt>可用来源</dt><dd>{selected.sources.length} 个</dd></div>
-                  <div><dt>路由状态</dt><dd>{selected.health}</dd></div>
-                </dl>
-
-                <div className="source-heading">
-                  <strong>可用供给</strong>
-                  <span><CircleGauge size={13} />价格与状态分开比较</span>
-                </div>
-                <div className="source-options">
-                  {selected.sources.map((source) => (
-                    <div className="source-option" key={`${selected.id}-${source.name}`}>
-                      <div><strong>{source.name}</strong>{source.recommended && <span>推荐</span>}</div>
-                      <small>{source.mode} · {source.note}</small>
-                      <div><b>{source.price}</b><em><i />{source.health}</em></div>
-                    </div>
-                  ))}
-                </div>
-
-                <div className="inspector-note">生产目录会显示真实中转站名称、条款、探测时间与样本量；当前均为界面演示数据。</div>
-                <button className="button button-primary inspector-action" type="button" onClick={() => setPrepared(selected)}>
-                  {selected.offerType === "自有端点" ? "连接到工作台" : "选择并配置"}<ChevronRight size={14} />
-                </button>
-              </>
-            ) : <div className="inspector-empty">选择一个模型查看供给方式。</div>}
-          </aside>
+        <div className="catalog-layout" data-view={view}>
+          {view === "compact" && <CompactResults offers={offers} selected={selected} onSelect={setSelectedId} />}
+          {view === "cards" && <CardResults offers={offers} selected={selected} onSelect={setSelectedId} />}
+          {view === "compare" && <CompareResults offers={offers} onPrepare={setPrepared} />}
+          {view !== "compare" && <ModelInspector selected={selected} onPrepare={setPrepared} />}
         </div>
       </section>
 
@@ -178,4 +120,106 @@ export function ModelSquare({ onOpenWorkspace }: { onOpenWorkspace: (offer?: Mod
       )}
     </main>
   );
+}
+
+function CompactResults({ offers, selected, onSelect }: { offers: ModelOffer[]; selected: ModelOffer | null; onSelect: (id: string) => void }) {
+  return (
+    <div className="catalog-results">
+      <div className="result-header" aria-hidden="true"><span>模型</span><span>供给</span><span>能力</span><span>起始价格</span><span>状态</span><span /></div>
+      <div className="offer-list">
+        {offers.map((offer) => (
+          <button className="offer-row" data-selected={selected?.id === offer.id} key={offer.id} type="button" onClick={() => onSelect(offer.id)}>
+            <span className="model-identity">
+              <span className="model-glyph" aria-hidden="true">{offer.kind === "开放权重" ? <Cpu size={15} /> : <Code2 size={15} />}</span>
+              <span><span className="model-title-line"><strong>{offer.name}</strong><small>{offer.family}</small></span><span className="model-summary">{offer.summary}</span></span>
+            </span>
+            <span className="offer-fact"><small>{offer.kind}</small><strong>{offer.offerType}</strong><em>{offer.sources.length} 个来源</em></span>
+            <span className="offer-fact"><small>{offer.specLabel}</small><strong>{offer.specValue}</strong><em>{offer.protocol}</em></span>
+            <span className="offer-price"><strong>{offer.price}</strong><small>{offer.unit}</small></span>
+            <span className="offer-health"><strong><i />{offer.health}</strong><small>24h 窗口</small></span>
+            <ChevronRight className="row-arrow" size={14} />
+          </button>
+        ))}
+        {offers.length === 0 && <EmptyResults />}
+      </div>
+    </div>
+  );
+}
+
+function CardResults({ offers, selected, onSelect }: { offers: ModelOffer[]; selected: ModelOffer | null; onSelect: (id: string) => void }) {
+  if (offers.length === 0) return <div className="catalog-results"><EmptyResults /></div>;
+  return (
+    <div className="model-card-grid">
+      {offers.map((offer) => (
+        <button className="model-card" data-selected={selected?.id === offer.id} key={offer.id} type="button" onClick={() => onSelect(offer.id)}>
+          <span className="model-card-head">
+            <span><strong>{offer.name}</strong><small>{offer.family}</small></span>
+            <em>{offer.kind}</em>
+          </span>
+          <span className="model-card-summary">{offer.summary}</span>
+          <span className="model-card-facts">
+            <span><small>起始价格</small><strong>{offer.price}</strong></span>
+            <span><small>{offer.specLabel}</small><strong>{offer.specValue}</strong></span>
+            <span><small>状态</small><strong className="card-health"><i />{offer.health}</strong></span>
+            <span><small>供给来源</small><strong>{offer.sources.length} 个</strong></span>
+          </span>
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function CompareResults({ offers, onPrepare }: { offers: ModelOffer[]; onPrepare: (offer: ModelOffer) => void }) {
+  if (offers.length === 0) return <div className="compare-view"><EmptyResults /></div>;
+  return (
+    <div className="compare-view">
+      <div className="compare-grid" style={{ gridTemplateColumns: `120px repeat(${offers.length}, minmax(160px, 1fr))` }}>
+        <span className="compare-label">模型</span>
+        {offers.map((offer) => <div className="compare-model" key={`${offer.id}-name`}><strong>{offer.name}</strong><small>{offer.family}</small></div>)}
+        <span className="compare-label">类型</span>{offers.map((offer) => <span key={`${offer.id}-kind`}>{offer.kind}</span>)}
+        <span className="compare-label">起始供给</span>{offers.map((offer) => <span key={`${offer.id}-offer`}>{offer.offerType}</span>)}
+        <span className="compare-label">{offers[0]?.specLabel ?? "能力"}</span>{offers.map((offer) => <strong key={`${offer.id}-spec`}>{offer.specValue}</strong>)}
+        <span className="compare-label">兼容协议</span>{offers.map((offer) => <span key={`${offer.id}-protocol`}>{offer.protocol}</span>)}
+        <span className="compare-label">起始价格</span>{offers.map((offer) => <strong className="compare-price" key={`${offer.id}-price`}>{offer.price}</strong>)}
+        <span className="compare-label">24h 状态</span>{offers.map((offer) => <span className="compare-health" key={`${offer.id}-health`}><i />{offer.health}</span>)}
+        <span className="compare-label">供给来源</span>{offers.map((offer) => <span key={`${offer.id}-sources`}>{offer.sources.length} 个</span>)}
+        <span className="compare-label">操作</span>{offers.map((offer) => <button className="compare-action" type="button" key={`${offer.id}-action`} onClick={() => onPrepare(offer)}>选择模型</button>)}
+      </div>
+    </div>
+  );
+}
+
+function ModelInspector({ selected, onPrepare }: { selected: ModelOffer | null; onPrepare: (offer: ModelOffer) => void }) {
+  if (!selected) return <aside className="model-inspector"><div className="inspector-empty">选择一个模型查看供给方式。</div></aside>;
+  return (
+    <aside className="model-inspector" aria-live="polite">
+      <div className="inspector-heading">
+        <span className="model-glyph">{selected.kind === "开放权重" ? <Cpu size={16} /> : <Code2 size={16} />}</span>
+        <div><strong>{selected.name}</strong><span>{selected.family} · {selected.kind}</span></div>
+      </div>
+      <code className="model-id">{selected.modelId}</code>
+      <dl className="model-specs">
+        <div><dt>{selected.specLabel}</dt><dd>{selected.specValue}</dd></div>
+        <div><dt>协议</dt><dd>{selected.protocol}</dd></div>
+      </dl>
+      <div className="source-heading"><strong>可用供给</strong><span>{selected.sources.length} 个</span></div>
+      <div className="source-options">
+        {selected.sources.map((source) => (
+          <div className="source-option" key={`${selected.id}-${source.name}`}>
+            <div><strong>{source.name}</strong>{source.recommended && <span>推荐</span>}</div>
+            <small>{source.mode} · {source.note}</small>
+            <div><b>{source.price}</b><em><i />{source.health}</em></div>
+          </div>
+        ))}
+      </div>
+      <div className="inspector-footer">
+        <small>生产版显示真实来源、条款与探测时间。</small>
+        <button className="button button-primary compact-button" type="button" onClick={() => onPrepare(selected)}>选择并配置</button>
+      </div>
+    </aside>
+  );
+}
+
+function EmptyResults() {
+  return <div className="catalog-empty">没有匹配项。清除搜索或切换供给类型。</div>;
 }
