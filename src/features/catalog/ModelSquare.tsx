@@ -1,26 +1,36 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
+  ArrowLeft,
   Check,
   ChevronRight,
   Code2,
   Cpu,
+  CreditCard,
   Image as ImageIcon,
+  KeyRound,
   LayoutGrid,
   MessageSquareText,
   Rows3,
   Search,
+  Server,
   Video,
+  WalletCards,
+  X,
 } from "lucide-react";
-import { MODEL_OFFERS, type ModelKind, type ModelModality, type ModelOffer } from "./catalogData";
+import {
+  MODEL_OFFERS,
+  type ModelKind,
+  type ModelModality,
+  type ModelOffer,
+  type OfferType,
+  type SupplyOption,
+} from "./catalogData";
 
 type Filter = "全部供给" | ModelKind;
 type ViewMode = "compact" | "cards";
+type AccessSelection = { offer: ModelOffer; source: SupplyOption };
 
-const MODALITIES: Array<{
-  id: ModelModality;
-  title: string;
-  Icon: typeof MessageSquareText;
-}> = [
+const MODALITIES: Array<{ id: ModelModality; title: string; Icon: typeof MessageSquareText }> = [
   { id: "语言", title: "语言", Icon: MessageSquareText },
   { id: "图片", title: "图片", Icon: ImageIcon },
   { id: "视频", title: "视频", Icon: Video },
@@ -36,7 +46,12 @@ export function ModelSquare({ onOpenWorkspace }: { onOpenWorkspace: (offer?: Mod
   const [filter, setFilter] = useState<Filter>("全部供给");
   const [view, setView] = useState<ViewMode>("compact");
   const [query, setQuery] = useState("");
-  const [prepared, setPrepared] = useState<ModelOffer | null>(null);
+  const [detail, setDetail] = useState<ModelOffer | null>(null);
+  const [access, setAccess] = useState<AccessSelection | null>(null);
+
+  useEffect(() => {
+    if (detail) window.scrollTo({ top: 0, behavior: "auto" });
+  }, [detail]);
 
   const offers = useMemo(() => {
     const normalized = query.trim().toLowerCase();
@@ -56,10 +71,19 @@ export function ModelSquare({ onOpenWorkspace }: { onOpenWorkspace: (offer?: Mod
     setQuery("");
   };
 
+  if (detail) {
+    return (
+      <main className="market-page model-detail-page">
+        <ModelDetail offer={detail} onBack={() => setDetail(null)} onChooseSource={(source) => setAccess({ offer: detail, source })} />
+        {access && <AccessDialog selection={access} onClose={() => setAccess(null)} onContinue={() => onOpenWorkspace(access.offer)} />}
+      </main>
+    );
+  }
+
   return (
     <main className="market-page">
       <header className="market-header">
-        <div><h1>模型广场</h1><p>先按任务类型选模型，再比较价格、线路与算力来源。</p></div>
+        <div><h1>模型广场</h1><p>先按任务类型选模型，再进入详情比较供给与接入方式。</p></div>
         <label className="catalog-search">
           <Search size={14} aria-hidden="true" />
           <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="搜索模型、厂商或用途" />
@@ -70,11 +94,7 @@ export function ModelSquare({ onOpenWorkspace }: { onOpenWorkspace: (offer?: Mod
         <div className="modality-switcher" aria-label="按生成类型选择模型">
           {MODALITIES.map(({ id, title, Icon }) => {
             const count = MODEL_OFFERS.filter((offer) => offer.modality === id).length;
-            return (
-              <button key={id} type="button" data-active={modality === id} onClick={() => chooseModality(id)}>
-                <Icon size={14} /><span>{title}</span><small>{count}</small>
-              </button>
-            );
+            return <button key={id} type="button" data-active={modality === id} onClick={() => chooseModality(id)}><Icon size={14} /><span>{title}</span><small>{count}</small></button>;
           })}
         </div>
         <div className="control-divider" />
@@ -85,36 +105,23 @@ export function ModelSquare({ onOpenWorkspace }: { onOpenWorkspace: (offer?: Mod
         </div>
         <div className="view-switch" aria-label="切换模型呈现方式">
           {VIEWS.map(({ id, label, Icon }) => (
-            <button key={id} type="button" aria-label={label} title={label} data-active={view === id} onClick={() => setView(id)}>
-              <Icon size={14} /><span>{label}</span>
-            </button>
+            <button key={id} type="button" aria-label={label} title={label} data-active={view === id} onClick={() => setView(id)}><Icon size={14} /><span>{label}</span></button>
           ))}
         </div>
       </section>
 
       <section className="catalog-section">
-        <div className="catalog-meta">
-          <span>{offers.length} 个模型 · {sourceCount} 个供给来源</span>
-          <span>报价与状态为演示数据</span>
-        </div>
-
+        <div className="catalog-meta"><span>{offers.length} 个模型 · {sourceCount} 个供给来源</span><span>报价与状态为演示数据</span></div>
         <div className="catalog-layout">
-          {view === "compact" && <CompactResults offers={offers} onPrepare={setPrepared} />}
-          {view === "cards" && <CardResults offers={offers} onPrepare={setPrepared} />}
+          {view === "compact" && <CompactResults offers={offers} onOpenDetail={setDetail} />}
+          {view === "cards" && <CardResults offers={offers} onOpenDetail={setDetail} />}
         </div>
       </section>
-
-      {prepared && (
-        <div className="selection-bar" role="status">
-          <div><span className="selection-check"><Check size={14} /></span><div><strong>{prepared.name}</strong><span>{prepared.offerType} · 已准备加入工作台</span></div></div>
-          <div><button type="button" onClick={() => setPrepared(null)}>取消</button><button className="button button-primary" type="button" onClick={() => onOpenWorkspace(prepared)}>继续配置</button></div>
-        </div>
-      )}
     </main>
   );
 }
 
-function CompactResults({ offers, onPrepare }: { offers: ModelOffer[]; onPrepare: (offer: ModelOffer) => void }) {
+function CompactResults({ offers, onOpenDetail }: { offers: ModelOffer[]; onOpenDetail: (offer: ModelOffer) => void }) {
   return (
     <div className="catalog-results">
       <div className="result-header" aria-hidden="true"><span>模型</span><span>供给</span><span>能力</span><span>协议</span><span>起始价格</span><span>状态</span><span>操作</span></div>
@@ -130,7 +137,7 @@ function CompactResults({ offers, onPrepare }: { offers: ModelOffer[]; onPrepare
             <span className="offer-protocol"><strong>{offer.protocol}</strong><small>{offer.sources.length} 个来源可用</small></span>
             <span className="offer-price"><strong>{offer.price}</strong><small>{offer.unit}</small></span>
             <span className="offer-health"><strong><i />{offer.health}</strong><small>24h 窗口</small></span>
-            <button className="row-action" type="button" onClick={() => onPrepare(offer)}>配置<ChevronRight size={12} /></button>
+            <button className="row-action" type="button" onClick={() => onOpenDetail(offer)}>查看<ChevronRight size={12} /></button>
           </article>
         ))}
         {offers.length === 0 && <EmptyResults />}
@@ -139,16 +146,13 @@ function CompactResults({ offers, onPrepare }: { offers: ModelOffer[]; onPrepare
   );
 }
 
-function CardResults({ offers, onPrepare }: { offers: ModelOffer[]; onPrepare: (offer: ModelOffer) => void }) {
+function CardResults({ offers, onOpenDetail }: { offers: ModelOffer[]; onOpenDetail: (offer: ModelOffer) => void }) {
   if (offers.length === 0) return <div className="catalog-results"><EmptyResults /></div>;
   return (
     <div className="model-card-grid">
       {offers.map((offer) => (
         <article className="model-card" key={offer.id}>
-          <span className="model-card-head">
-            <span><strong>{offer.name}</strong><small>{offer.family}</small></span>
-            <em>{offer.kind}</em>
-          </span>
+          <span className="model-card-head"><span><strong>{offer.name}</strong><small>{offer.family}</small></span><em>{offer.kind}</em></span>
           <span className="model-card-summary">{offer.summary}</span>
           <span className="model-card-facts">
             <span><small>起始价格</small><strong>{offer.price}</strong></span>
@@ -156,11 +160,88 @@ function CardResults({ offers, onPrepare }: { offers: ModelOffer[]; onPrepare: (
             <span><small>状态</small><strong className="card-health"><i />{offer.health}</strong></span>
             <span><small>供给来源</small><strong>{offer.sources.length} 个</strong></span>
           </span>
-          <span className="model-card-footer"><small>{offer.protocol}</small><button type="button" onClick={() => onPrepare(offer)}>配置<ChevronRight size={12} /></button></span>
+          <span className="model-card-footer"><small>{offer.protocol}</small><button type="button" onClick={() => onOpenDetail(offer)}>查看详情<ChevronRight size={12} /></button></span>
         </article>
       ))}
     </div>
   );
+}
+
+function ModelDetail({ offer, onBack, onChooseSource }: { offer: ModelOffer; onBack: () => void; onChooseSource: (source: SupplyOption) => void }) {
+  return (
+    <>
+      <nav className="detail-nav" aria-label="模型详情导航"><button type="button" onClick={onBack}><ArrowLeft size={14} />返回模型广场</button></nav>
+      <header className="detail-header">
+        <div className="detail-title">
+          <span className="detail-glyph">{offer.kind === "开放权重" ? <Cpu size={20} /> : <Code2 size={20} />}</span>
+          <div><span className="detail-badges"><i>{offer.modality}模型</i><i>{offer.kind}</i></span><h1>{offer.name}</h1><code>{offer.modelId}</code></div>
+        </div>
+        <p>{offer.summary}。选择具体供给后，再根据计费方式进入余额、授权或部署确认。</p>
+      </header>
+
+      <section className="detail-facts" aria-label="模型核心信息">
+        <div><span>{offer.specLabel}</span><strong>{offer.specValue}</strong></div>
+        <div><span>兼容协议</span><strong>{offer.protocol}</strong></div>
+        <div><span>起始价格</span><strong>{offer.price}</strong><small>{offer.unit}</small></div>
+        <div><span>24h 状态</span><strong className="detail-health"><i />{offer.health}</strong><small>演示监测窗口</small></div>
+      </section>
+
+      <section className="detail-sources">
+        <div className="detail-section-head"><div><h2>选择供给</h2><p>同一模型的不同中转站、官方 Key 和算力来源分别计费，不在广场直接配置。</p></div><span>{offer.sources.length} 个可用来源</span></div>
+        <div className="source-table">
+          <div className="source-table-head" aria-hidden="true"><span>供给来源</span><span>结算方式</span><span>价格</span><span>状态</span><span>下一步</span></div>
+          {offer.sources.map((source) => (
+            <article className="detail-source-row" key={`${offer.id}-${source.name}`}>
+              <div><strong>{source.name}</strong><small>{source.note}</small></div>
+              <span>{source.mode}</span>
+              <strong className="source-price">{source.price}</strong>
+              <span className="source-health"><i />{source.health}</span>
+              <button type="button" onClick={() => onChooseSource(source)}>{sourceAction(source.mode)}<ChevronRight size={12} /></button>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <section className="access-principle">
+        <strong>配置与付费分开</strong>
+        <span>统一余额与共享算力按使用量扣费；BYOK 和自有端点在外部结算；专属算力创建前单独确认持续成本。</span>
+      </section>
+    </>
+  );
+}
+
+function AccessDialog({ selection, onClose, onContinue }: { selection: AccessSelection; onClose: () => void; onContinue: () => void }) {
+  const flow = accessFlow(selection.source.mode);
+  const FlowIcon = flow.Icon;
+  return (
+    <div className="access-dialog-backdrop" role="presentation">
+      <section className="access-dialog" role="dialog" aria-modal="true" aria-labelledby="access-dialog-title">
+        <header><div><span className="access-flow-icon"><FlowIcon size={17} /></span><div><h2 id="access-dialog-title">{flow.title}</h2><p>{flow.description}</p></div></div><button type="button" aria-label="关闭" onClick={onClose}><X size={15} /></button></header>
+        <dl className="access-summary">
+          <div><dt>模型</dt><dd>{selection.offer.name}</dd></div>
+          <div><dt>供给</dt><dd>{selection.source.name}</dd></div>
+          <div><dt>结算</dt><dd>{selection.source.mode}</dd></div>
+          <div><dt>价格</dt><dd>{selection.source.price}</dd></div>
+        </dl>
+        <div className="access-status"><Check size={14} /><div><strong>{flow.status}</strong><p>{flow.note}</p></div></div>
+        <footer><button type="button" onClick={onClose}>返回选择</button><button className="button button-primary" type="button" onClick={onContinue}>{flow.action}<ChevronRight size={13} /></button></footer>
+      </section>
+    </div>
+  );
+}
+
+function sourceAction(mode: OfferType) {
+  if (mode === "BYOK") return "绑定凭证";
+  if (mode === "专属算力") return "确认预算";
+  if (mode === "自有端点") return "连接端点";
+  return "选择供给";
+}
+
+function accessFlow(mode: OfferType) {
+  if (mode === "BYOK") return { title: "前往工作台绑定凭证", description: "该供给使用你的供应商账户，不经过 Moyusi 充值。", status: "外部结算", note: "Secret 只在本地授权；工作环境仅保存引用和作用域。", action: "前往工作台绑定", Icon: KeyRound };
+  if (mode === "自有端点") return { title: "前往工作台连接端点", description: "接入已有的兼容端点，不经过 Moyusi 支付。", status: "无需充值", note: "连接后先完成协议、模型身份和健康探测，再允许加入活动路由。", action: "前往工作台连接", Icon: Server };
+  if (mode === "专属算力") return { title: "先确认算力预算", description: "专属部署创建后会产生持续成本，需要单独确认。", status: "需要预算确认", note: "下一步展示最低持续成本、预计月成本、启动时间和自动休眠规则。", action: "前往工作台确认", Icon: CreditCard };
+  return { title: "确认统一余额计费", description: "配置本身不扣费，首次调用后才按实际用量结算。", status: "余额可用 · ¥ 86.40", note: "余额不足时先进入充值页；充值完成后返回当前模型与供给，不丢失选择。", action: "加入工作台", Icon: WalletCards };
 }
 
 function EmptyResults() {

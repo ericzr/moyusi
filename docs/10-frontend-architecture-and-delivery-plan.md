@@ -247,7 +247,7 @@ POST /api/deployments
 3. 将 `catalogData.ts` 移到独立 fixtures，并明确禁止生产导入。
 4. 定义 Model、RouteOffer、ServingRevision、WorkspaceProfile Schema。
 5. 建 Catalog 与 Workspace Summary mock API。
-6. 完成模型详情抽屉和多供给比较。
+6. 完成独立模型详情页、多供给比较与计费/授权分流。
 7. 完成工作台加载、空、错误、未知健康和余额不足状态。
 8. 建 Codex/Claude Code 多版本配置 fixture。
 9. 建“模型 → 工作台路由”的端到端测试。
