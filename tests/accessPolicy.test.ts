@@ -13,8 +13,8 @@ describe("access policy", () => {
   });
 
   it("keeps source actions explicit", () => {
-    expect(sourceActionLabel("BYOK")).toBe("绑定凭证");
-    expect(sourceActionLabel("统一余额")).toBe("选择供给");
+    expect(sourceActionLabel("BYOK")).toBe("连接并使用");
+    expect(sourceActionLabel("统一余额")).toBe("一键切换");
   });
 
   it("rejects unknown workbench routes", () => {

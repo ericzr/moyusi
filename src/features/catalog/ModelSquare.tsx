@@ -66,7 +66,7 @@ export function ModelSquare({ onOpenDetail }: { onOpenDetail: (modelId: string) 
   return (
     <main className="market-page">
       <header className="market-header">
-        <div><h1>模型广场</h1><p>先按任务类型选模型，再进入详情比较供给与接入方式。</p></div>
+        <div><h1>模型广场</h1><p>先看它适合做什么，再比较价格、速度和稳定性。</p></div>
         <label className="catalog-search">
           <Search size={14} aria-hidden="true" />
           <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="搜索模型、厂商或用途" />
@@ -94,7 +94,7 @@ export function ModelSquare({ onOpenDetail }: { onOpenDetail: (modelId: string) 
       </section>
 
       <section className="catalog-section">
-        <div className="catalog-meta"><span>{offers.length} 个模型 · {sourceCount} 个供给来源</span><span>报价与状态为演示数据</span></div>
+        <div className="catalog-meta"><span>{offers.length} 个模型 · {sourceCount} 个可切换来源</span><span>价格、延迟与状态为演示数据</span></div>
         <div className="catalog-layout">
           {view === "compact" && <CompactResults offers={offers} onOpenDetail={(offer) => onOpenDetail(offer.id)} />}
           {view === "cards" && <CardResults offers={offers} onOpenDetail={(offer) => onOpenDetail(offer.id)} />}
@@ -141,7 +141,7 @@ export function ModelDetailPage({
 function CompactResults({ offers, onOpenDetail }: { offers: ModelOffer[]; onOpenDetail: (offer: ModelOffer) => void }) {
   return (
     <div className="catalog-results">
-      <div className="result-header" aria-hidden="true"><span>模型</span><span>供给</span><span>能力</span><span>协议</span><span>起始价格</span><span>状态</span><span>操作</span></div>
+      <div className="result-header" aria-hidden="true"><span>模型</span><span>适合</span><span>来源</span><span>起始价格</span><span>响应 / 排队</span><span>稳定性</span><span>操作</span></div>
       <div className="offer-list">
         {offers.map((offer) => (
           <article className="offer-row" key={offer.id}>
@@ -149,10 +149,10 @@ function CompactResults({ offers, onOpenDetail }: { offers: ModelOffer[]; onOpen
               <span className="model-glyph" aria-hidden="true">{offer.kind === "开放权重" ? <Cpu size={15} /> : <Code2 size={15} />}</span>
               <span><span className="model-title-line"><strong>{offer.name}</strong><small>{offer.family}</small></span><span className="model-summary">{offer.summary}</span></span>
             </span>
-            <span className="offer-fact"><small>{offer.kind}</small><strong>{offer.offerType}</strong><em>{offer.sources.length} 个来源</em></span>
-            <span className="offer-fact"><small>{offer.specLabel}</small><strong>{offer.specValue}</strong></span>
-            <span className="offer-protocol"><strong>{offer.protocol}</strong><small>{offer.sources.length} 个来源可用</small></span>
+            <span className="offer-use">{offer.tags.slice(0, 2).map((tag) => <small key={tag}>{tag}</small>)}</span>
+            <span className="offer-fact"><small>{offer.kind}</small><strong>{offer.sources.length} 个来源</strong><em>{offer.offerType}</em></span>
             <span className="offer-price"><strong>{offer.price}</strong><small>{offer.unit}</small></span>
+            <span className="offer-latency"><strong>{offer.latency}</strong><small>推荐来源 · 演示</small></span>
             <span className="offer-health"><strong><i />{offer.health}</strong><small>24h 窗口</small></span>
             <button className="row-action" type="button" onClick={() => onOpenDetail(offer)}>查看<ChevronRight size={12} /></button>
           </article>
@@ -173,7 +173,7 @@ function CardResults({ offers, onOpenDetail }: { offers: ModelOffer[]; onOpenDet
           <span className="model-card-summary">{offer.summary}</span>
           <span className="model-card-facts">
             <span><small>起始价格</small><strong>{offer.price}</strong></span>
-            <span><small>{offer.specLabel}</small><strong>{offer.specValue}</strong></span>
+            <span><small>响应 / 排队</small><strong>{offer.latency}</strong></span>
             <span><small>状态</small><strong className="card-health"><i />{offer.health}</strong></span>
             <span><small>供给来源</small><strong>{offer.sources.length} 个</strong></span>
           </span>
@@ -193,25 +193,26 @@ function ModelDetail({ offer, onBack, onChooseSource }: { offer: ModelOffer; onB
           <span className="detail-glyph">{offer.kind === "开放权重" ? <Cpu size={20} /> : <Code2 size={20} />}</span>
           <div><span className="detail-badges"><i>{offer.modality}模型</i><i>{offer.kind}</i></span><h1>{offer.name}</h1><code>{offer.modelId}</code></div>
         </div>
-        <p>{offer.summary}。选择具体供给后，再根据计费方式进入余额、授权或部署确认。</p>
+        <p>{offer.summary}。下面只比较会影响选择的价格、速度和稳定性；选择后 Moyusi 会把专业配置放到正确的位置。</p>
       </header>
 
       <section className="detail-facts" aria-label="模型核心信息">
-        <div><span>{offer.specLabel}</span><strong>{offer.specValue}</strong></div>
-        <div><span>兼容协议</span><strong>{offer.protocol}</strong></div>
+        <div><span>适合</span><strong>{offer.tags.slice(0, 2).join("、")}</strong></div>
+        <div><span>推荐来源响应 / 排队</span><strong>{offer.latency}</strong><small>演示窗口</small></div>
         <div><span>起始价格</span><strong>{offer.price}</strong><small>{offer.unit}</small></div>
         <div><span>24h 状态</span><strong className="detail-health"><i />{offer.health}</strong><small>演示监测窗口</small></div>
       </section>
 
       <section className="detail-sources">
-        <div className="detail-section-head"><div><h2>选择供给</h2><p>同一模型的不同中转站、官方 Key 和算力来源分别计费，不在广场直接配置。</p></div><span>{offer.sources.length} 个可用来源</span></div>
+        <div className="detail-section-head"><div><h2>同一模型，选择不同来源</h2><p>模型能力相同，来源会影响价格、速度、稳定性和结算方式。</p></div><span>{offer.sources.length} 个可用来源</span></div>
         <div className="source-table">
-          <div className="source-table-head" aria-hidden="true"><span>供给来源</span><span>结算方式</span><span>价格</span><span>状态</span><span>下一步</span></div>
+          <div className="source-table-head" aria-hidden="true"><span>模型来源</span><span>怎么付费</span><span>价格</span><span>响应 / 排队</span><span>稳定性</span><span>操作</span></div>
           {offer.sources.map((source) => (
             <article className="detail-source-row" key={`${offer.id}-${source.name}`}>
-              <div><strong>{source.name}</strong><small>{source.note}</small></div>
+              <div><strong>{source.name}{source.recommended && <em className="source-recommended">推荐</em>}</strong><small>{source.note}</small></div>
               <span>{source.mode}</span>
               <strong className="source-price">{source.price}</strong>
+              <span className="source-latency">{source.latency}</span>
               <span className="source-health"><i />{source.health}</span>
               <button type="button" onClick={() => onChooseSource(source)}>{sourceActionLabel(source.mode)}<ChevronRight size={12} /></button>
             </article>
@@ -220,9 +221,14 @@ function ModelDetail({ offer, onBack, onChooseSource }: { offer: ModelOffer; onB
       </section>
 
       <section className="access-principle">
-        <strong>配置与付费分开</strong>
-        <span>统一余额与共享算力按使用量扣费；BYOK 和自有端点在外部结算；专属算力创建前单独确认持续成本。</span>
+        <strong>你只需做选择</strong>
+        <span>使用 Moyusi 余额的来源可直接切换；使用自己的账号或服务器时，我们会引导完成一次连接；持续计费的专属算力会在创建前再次确认。</span>
       </section>
+
+      <details className="technical-details">
+        <summary>开发者信息</summary>
+        <div><span>模型标识</span><code>{offer.modelId}</code><span>兼容方式</span><code>{offer.protocol}</code><span>{offer.specLabel}</span><code>{offer.specValue}</code></div>
+      </details>
     </>
   );
 }

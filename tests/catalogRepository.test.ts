@@ -20,6 +20,17 @@ describe("catalog repository", () => {
     expect(catalogRepository.resolveSelection("claude-sonnet", "不存在的来源")).toBeNull();
   });
 
+  it("keeps every source directly comparable on price, latency and stability", () => {
+    for (const offer of catalogRepository.list()) {
+      expect(offer.latency).not.toBe("");
+      for (const source of offer.sources) {
+        expect(source.price).not.toBe("");
+        expect(source.latency).not.toBe("");
+        expect(source.health).not.toBe("");
+      }
+    }
+  });
+
   it("does not mutate its input collection", () => {
     const sample = catalogRepository.list().slice(0, 2);
     expect(filterCatalog(sample, { query: "___missing___" })).toEqual([]);

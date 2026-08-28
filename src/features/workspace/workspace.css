@@ -63,6 +63,10 @@
 .pending-offer strong { font-size: 11px; }
 .pending-offer p { margin: 3px 0 0; color: var(--text-faint); font-size: 8px; }
 .pending-offer button { min-height: 31px; padding: 0 10px; border: 1px solid var(--primary); border-radius: 6px; background: var(--primary); color: var(--on-primary); font-size: 9px; font-weight: 650; }
+.workspace-advanced { margin-top: 14px; border-top: 1px solid var(--line); }
+.workspace-advanced > summary { padding: 13px 2px; color: var(--text-muted); font-size: 9px; cursor: pointer; }
+.workspace-advanced > .two-column-panels { margin-top: 4px; }
+.workspace-advanced > .deployment-boundary { margin-top: 4px; }
 .route-order { margin-top: 16px; border-top: 1px solid var(--line); }
 .route-order-row { display: grid; grid-template-columns: 34px 1fr auto auto; align-items: center; gap: 12px; padding: 14px 0; border-bottom: 1px solid var(--line); }
 .route-index { color: var(--text-faint); font: 650 9px/1 ui-monospace, SFMono-Regular, Menlo, monospace; }

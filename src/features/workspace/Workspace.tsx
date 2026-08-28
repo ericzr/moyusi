@@ -30,11 +30,11 @@ import "./workspace.css";
 
 const NAV: { id: WorkspaceSection; label: string; icon: LucideIcon }[] = [
   { id: "overview", label: "总览", icon: Activity },
-  { id: "routing", label: "路由", icon: Network },
-  { id: "sources", label: "API 与来源", icon: KeyRound },
-  { id: "deployments", label: "模型与部署", icon: CloudCog },
-  { id: "environment", label: "工作环境", icon: Sparkles },
-  { id: "billing", label: "用量与计费", icon: ReceiptText },
+  { id: "routing", label: "模型切换", icon: Network },
+  { id: "sources", label: "模型来源", icon: KeyRound },
+  { id: "deployments", label: "我的模型", icon: CloudCog },
+  { id: "environment", label: "AI 配置与迁移", icon: Sparkles },
+  { id: "billing", label: "费用", icon: ReceiptText },
   { id: "account", label: "账户", icon: CircleUserRound },
 ];
 
@@ -72,8 +72,8 @@ export function Workspace({
           ))}
         </nav>
         <div className="sidebar-foot">
-          <span><i /> 本地路由器在线</span>
-          <small>Desktop 0.1 preview</small>
+          <span><i /> 一键切换已就绪</span>
+          <small>Moyusi Desktop · 本机</small>
         </div>
       </aside>
 
@@ -95,13 +95,13 @@ export function Workspace({
 
 function PendingSelection({ selection, onAction }: { selection: CatalogSelection; onAction: (message: string) => void }) {
   const flow = getAccessFlow(selection.source.mode);
-  const actionLabel = flow.actionKind === "credential" ? "绑定凭证" : flow.actionKind === "endpoint" ? "验证端点" : flow.actionKind === "budget" ? "查看预算" : "保存并验证";
+  const actionLabel = flow.actionKind === "credential" ? "连接并使用" : flow.actionKind === "endpoint" ? "连接并使用" : flow.actionKind === "budget" ? "查看费用" : "一键切换";
   return (
     <div className="pending-offer" role="status">
       <span className="pending-icon"><Box size={17} /></span>
       <div>
         <strong>{selection.offer.name} · {selection.source.name}</strong>
-        <p>{selection.source.mode} · {selection.source.price} · 已从模型详情带入当前步骤</p>
+        <p>{selection.source.mode} · {selection.source.price} · {selection.source.latency} · 已保留你的选择</p>
       </div>
       <button type="button" onClick={() => onAction(`${selection.offer.name}：${actionLabel}流程已准备`)}>{actionLabel}</button>
     </div>
@@ -120,7 +120,7 @@ function PageHead({ title, description, action }: { kicker: string; title: strin
 function Overview({ onNavigate }: { onNavigate: (section: WorkspaceSection) => void }) {
   return (
     <>
-      <PageHead kicker="CONTROL PLANE" title="工作台" description="今天需要关注 2 项。其余路由、资产和费用均在预期范围内。" action={<span className="workspace-ready"><i /> ALL SYSTEMS READY</span>} />
+      <PageHead kicker="CONTROL PLANE" title="工作台" description="模型切换、AI 配置和费用都在这里。今天有 2 项需要确认。" action={<span className="workspace-ready"><i /> 运行正常</span>} />
       <div className="workspace-stats">
         <Metric label="本期费用" value="¥ 28.40" note="预算的 36%" />
         <Metric label="今日请求" value="184" note="成功率 99.8%" />
@@ -130,11 +130,11 @@ function Overview({ onNavigate }: { onNavigate: (section: WorkspaceSection) => v
 
       <div className="overview-grid">
         <Panel className="active-route-panel">
-          <PanelHead eyebrow="ACTIVE ROUTE" title="Codex · 日常编程" action={<button type="button" onClick={() => onNavigate("routing")}>管理路由 <ChevronRight size={13} /></button>} />
+          <PanelHead eyebrow="ACTIVE ROUTE" title="Codex 当前使用" action={<button type="button" onClick={() => onNavigate("routing")}>切换模型 <ChevronRight size={13} /></button>} />
           <div className="route-path">
-            <RouteNode icon={Code2} label="Codex" detail="本地代理" />
+            <RouteNode icon={Code2} label="Codex" detail="你的工具" />
             <ArrowRight size={16} />
-            <RouteNode icon={Network} label="稳定策略" detail="2 条回退" />
+            <RouteNode icon={Network} label="自动选择" detail="故障时切换" />
             <ArrowRight size={16} />
             <RouteNode icon={Server} label="GPT · Coding" detail="统一余额" active />
           </div>
@@ -142,12 +142,12 @@ function Overview({ onNavigate }: { onNavigate: (section: WorkspaceSection) => v
         </Panel>
 
         <Panel>
-          <PanelHead eyebrow="WORKSPACE PROFILE" title="日常编程 · v12" action={<button type="button" onClick={() => onNavigate("environment")}>查看环境 <ChevronRight size={13} /></button>} />
+          <PanelHead eyebrow="WORKSPACE PROFILE" title="我的 AI 配置 · 日常编程" action={<button type="button" onClick={() => onNavigate("environment")}>管理与迁移 <ChevronRight size={13} /></button>} />
           <div className="asset-counts">
-            <AssetCount icon={PlugZap} label="MCP" value="4" />
-            <AssetCount icon={Wrench} label="Skills" value="6" />
-            <AssetCount icon={SquareTerminal} label="Prompts" value="3" />
-            <AssetCount icon={BookOpen} label="知识库" value="2" />
+            <AssetCount icon={PlugZap} label="MCP 工具" value="4" />
+            <AssetCount icon={Wrench} label="Skills 技能" value="6" />
+            <AssetCount icon={SquareTerminal} label="Prompts 提示词" value="3" />
+            <AssetCount icon={BookOpen} label="记忆与知识库" value="20" />
           </div>
           <div className="sync-summary"><span>Codex</span><strong><i />已同步</strong><span>Claude Code</span><strong className="warn">2 项待确认</strong></div>
         </Panel>
@@ -155,7 +155,7 @@ function Overview({ onNavigate }: { onNavigate: (section: WorkspaceSection) => v
 
       <Panel className="attention-panel">
         <PanelHead eyebrow="NEEDS ATTENTION" title="需要处理" />
-        <Attention icon={AlertCircle} title="Claude Code 有 2 项适配变更" description="一个 Prompt 角色将转换，一个 MCP 权限需要重新确认。" action="查看迁移" onClick={() => onNavigate("environment")} />
+        <Attention icon={AlertCircle} title="Claude Code 迁移需要确认 2 项" description="一个提示词会自动转换，一个 MCP 工具需要重新授权。" action="继续迁移" onClick={() => onNavigate("environment")} />
         <Attention icon={Wallet} title="供应商 BYOK 余额未同步" description="费用显示为本地估算，不会从 Moyusi 余额扣除。" action="查看来源" onClick={() => onNavigate("sources")} />
       </Panel>
     </>
@@ -165,20 +165,23 @@ function Overview({ onNavigate }: { onNavigate: (section: WorkspaceSection) => v
 function Routing({ onBrowseModels, onAction }: { onBrowseModels: () => void; onAction: (message: string) => void }) {
   return (
     <>
-      <PageHead kicker="ROUTING" title="路由" description="按工具管理模型映射、优先级、回退与数据策略。跨模型回退默认关闭。" action={<button className="button button-primary compact-button" type="button" onClick={onBrowseModels}>添加模型</button>} />
+      <PageHead kicker="ROUTING" title="模型切换" description="选择一个软件，再选择它要使用的模型来源。切换前会先检查可用性，并保留原配置用于恢复。" action={<button className="button button-primary compact-button" type="button" onClick={onBrowseModels}>从广场选择模型</button>} />
       <Panel>
-        <PanelHead eyebrow="PROVIDER PROFILE" title="Codex · 日常编程" action={<span className="inline-status"><i />活动中</span>} />
+        <PanelHead eyebrow="PROVIDER PROFILE" title="Codex 当前模型" action={<span className="inline-status"><i />正在使用</span>} />
         <div className="route-order">
           <RouteOrder index="01" name="GPT · Coding" meta="统一余额 · 稳定线路" health="99.95%" />
           <RouteOrder index="02" name="Claude Sonnet" meta="统一余额 · 同任务回退" health="99.92%" />
           <RouteOrder index="03" name="Qwen Coder" meta="共享算力 · 开放权重" health="99.76%" />
         </div>
-        <div className="panel-footer"><span>仅在超时、429 或可恢复 5xx 时回退</span><button type="button" onClick={() => onAction("路由策略预览已打开")}>编辑策略</button></div>
+        <div className="panel-footer"><span>当前来源不可用时，自动尝试下面的备用来源</span><button type="button" onClick={() => onAction("切换规则已打开")}>切换规则</button></div>
       </Panel>
-      <div className="two-column-panels">
-        <Panel><PanelHead eyebrow="LOCAL ROUTER" title="本地路由器" /><SettingRow label="监听地址" value="127.0.0.1:16888" /><SettingRow label="健康检查" value="每 30 秒" /><SettingRow label="配置写入" value="原子写入 + 自动备份" /></Panel>
-        <Panel><PanelHead eyebrow="POLICY" title="默认约束" /><SettingRow label="数据地区" value="亚太优先" /><SettingRow label="正文留存" value="不允许" /><SettingRow label="跨模型回退" value="关闭" /></Panel>
-      </div>
+      <details className="workspace-advanced">
+        <summary>高级设置</summary>
+        <div className="two-column-panels">
+          <Panel><PanelHead eyebrow="LOCAL ROUTER" title="本地连接" /><SettingRow label="监听地址" value="127.0.0.1:16888" /><SettingRow label="可用性检查" value="每 30 秒" /><SettingRow label="修改保护" value="自动备份，可恢复" /></Panel>
+          <Panel><PanelHead eyebrow="POLICY" title="数据与切换规则" /><SettingRow label="优先地区" value="亚太" /><SettingRow label="保存请求正文" value="不保存" /><SettingRow label="切换到不同型号" value="不允许" /></Panel>
+        </div>
+      </details>
     </>
   );
 }
@@ -186,12 +189,12 @@ function Routing({ onBrowseModels, onAction }: { onBrowseModels: () => void; onA
 function Sources({ onAction }: { onAction: (message: string) => void }) {
   return (
     <>
-      <PageHead kicker="API & SOURCES" title="API 与来源" description="平台 Key、BYOK 和供应商连接使用不同安全与计费边界。" action={<button className="button button-primary compact-button" type="button" onClick={() => onAction("已创建演示 Key；生产版完整 Key 仅显示一次")}>创建 Key</button>} />
+      <PageHead kicker="API & SOURCES" title="模型来源" description="管理 Moyusi 余额来源和你自己的模型账号。自己的密钥只保存在本机，费用由对应平台收取。" action={<button className="button button-primary compact-button" type="button" onClick={() => onAction("调用密钥创建流程已打开；完整值只显示一次")}>创建调用密钥</button>} />
       <div className="source-grid">
-        <Panel><PanelHead eyebrow="MOYUSI KEY" title="平台 Key" action={<span className="inline-status"><i />正常</span>} /><div className="key-display"><KeyRound size={17} /><code>moy_••••••••92F1</code><span>今天使用</span></div><SettingRow label="允许模型" value="4 个" /><SettingRow label="本月限额" value="¥ 120.00" /><SettingRow label="到期" value="永不过期" /><div className="panel-footer"><span>明文不会再次显示</span><button type="button" onClick={() => onAction("Key 轮换流程已准备")}>轮换</button></div></Panel>
-        <Panel><PanelHead eyebrow="LOCAL BYOK" title="本地凭证" /><SourceRow name="Google AI" meta="Keychain · 不上传云端" status="已连接" /><SourceRow name="OpenRouter" meta="Keychain · 费用外部结算" status="待同步" /><button className="source-add" type="button" onClick={() => onAction("已打开本地凭证连接流程")}>连接新的供应商 <ChevronRight size={13} /></button></Panel>
+        <Panel><PanelHead eyebrow="MOYUSI KEY" title="Moyusi 调用密钥" action={<span className="inline-status"><i />正常</span>} /><div className="key-display"><KeyRound size={17} /><code>moy_••••••••92F1</code><span>今天使用</span></div><SettingRow label="可用模型" value="4 个" /><SettingRow label="每月限额" value="¥ 120.00" /><SettingRow label="有效期" value="长期" /><div className="panel-footer"><span>完整密钥不会再次显示</span><button type="button" onClick={() => onAction("密钥更换流程已准备")}>更换</button></div></Panel>
+        <Panel><PanelHead eyebrow="LOCAL BYOK" title="我的模型账号" /><SourceRow name="Google AI" meta="只保存在本机 · 平台直接收费" status="已连接" /><SourceRow name="OpenRouter" meta="只保存在本机 · 平台直接收费" status="待同步" /><button className="source-add" type="button" onClick={() => onAction("模型账号连接流程已打开")}>连接新的模型账号 <ChevronRight size={13} /></button></Panel>
       </div>
-      <div className="security-note"><ShieldCheck size={17} /><div><strong>Secret 不进入工作环境包</strong><p>跨设备或软件迁移时只携带 Secret reference 和所需作用域，目标环境必须重新授权。</p></div></div>
+      <div className="security-note"><ShieldCheck size={17} /><div><strong>密钥不会跟随 AI 配置迁移</strong><p>切换设备或软件时只迁移非敏感设置；模型账号需要在新设备上重新确认。</p></div></div>
     </>
   );
 }
@@ -199,13 +202,13 @@ function Sources({ onAction }: { onAction: (message: string) => void }) {
 function Deployments({ onBrowseModels, onAction }: { onBrowseModels: () => void; onAction: (message: string) => void }) {
   return (
     <>
-      <PageHead kicker="MODELS & DEPLOYMENTS" title="模型与部署" description="共享开放模型、专属端点和自有算力进入同一套路由，但成本与运行状态分开表达。" action={<button className="button button-primary compact-button" type="button" onClick={onBrowseModels}>浏览开放模型</button>} />
+      <PageHead kicker="MODELS & DEPLOYMENTS" title="我的模型" description="查看已经使用的开放模型、专属服务器和自己的服务器。成本与运行状态分开显示。" action={<button className="button button-primary compact-button" type="button" onClick={onBrowseModels}>添加开放模型</button>} />
       <div className="deployment-list">
         <Deployment icon={Server} name="Qwen Coder" type="共享端点" state="WARM" details={["FP8 · vLLM", "新加坡", "¥ 0.86 / M 起"]} action="查看" onClick={() => onAction("共享端点详情已打开")} />
         <Deployment icon={CloudCog} name="DeepSeek Reasoning" type="弹性共享" state="COLD" details={["BF16 · SGLang", "东京", "冷启动约 28 秒"]} action="启动" onClick={() => onAction("启动请求已进入演示队列")} />
         <Deployment icon={Database} name="Private Endpoint" type="用户自有端点" state="HEALTHY" details={["OpenAI-compatible", "私有网络", "外部计费"]} action="测试" onClick={() => onAction("端点协议与能力测试通过")} />
       </div>
-      <Panel className="deployment-boundary"><PanelHead eyebrow="SERVING IDENTITY" title="部署身份可追溯" /><div className="identity-code"><code>repo + revision + weights digest + quantization + engine/version</code><p>不同量化、模板或引擎参数不会被静默视为完全相同的模型线路。</p></div></Panel>
+      <details className="workspace-advanced"><summary>开发者信息</summary><Panel className="deployment-boundary"><PanelHead eyebrow="SERVING IDENTITY" title="模型版本可追溯" /><div className="identity-code"><code>repo + revision + weights digest + quantization + engine/version</code><p>不同量化、模板或引擎参数不会被静默视为完全相同的模型来源。</p></div></Panel></details>
     </>
   );
 }
@@ -214,7 +217,7 @@ function Environment({ onAction }: { onAction: (message: string) => void }) {
   const [profile, setProfile] = useState<"daily" | "team">("daily");
   return (
     <>
-      <PageHead kicker="PORTABLE WORKSPACE" title="工作环境" description="把路由、MCP、Skills、Prompts、经审核记忆和知识源组织成一个可迁移 Profile。" action={<button className="button button-primary compact-button" type="button" onClick={() => onAction("已生成目标软件兼容性报告")}>部署到软件</button>} />
+      <PageHead kicker="PORTABLE WORKSPACE" title="AI 配置与迁移" description="统一管理 MCP 工具、Skills 技能、Prompts 提示词、记忆和知识库，并一键迁移到其他 AI 软件。" action={<button className="button button-primary compact-button" type="button" onClick={() => onAction("已生成迁移预览；确认后才会修改目标软件")}>一键迁移</button>} />
       <div className="profile-switcher">
         <button type="button" data-active={profile === "daily"} onClick={() => setProfile("daily")}><span>日常编程</span><small>v12 · 2 个目标</small></button>
         <button type="button" data-active={profile === "team"} onClick={() => setProfile("team")}><span>团队工程</span><small>v4 · 1 个目标</small></button>
@@ -223,17 +226,17 @@ function Environment({ onAction }: { onAction: (message: string) => void }) {
         <Panel>
           <PanelHead eyebrow="ASSETS" title={profile === "daily" ? "日常编程 · v12" : "团队工程 · v4"} />
           <div className="asset-list">
-            <AssetRow icon={PlugZap} name="MCP" value={profile === "daily" ? "4 个服务" : "6 个服务"} note="权限在目标软件重新确认" />
-            <AssetRow icon={Wrench} name="Skills" value={profile === "daily" ? "6 个技能" : "9 个技能"} note="2 个包含已扫描脚本" />
-            <AssetRow icon={SquareTerminal} name="Prompts" value="3 个模板" note="保留目标模型变体" />
-            <AssetRow icon={BookOpen} name="记忆与知识" value="18 + 2" note="源文档与 ACL 为事实源" />
+            <AssetRow icon={PlugZap} name="MCP 工具" value={profile === "daily" ? "4 个服务" : "6 个服务"} note="迁移时会重新确认权限" />
+            <AssetRow icon={Wrench} name="Skills 技能" value={profile === "daily" ? "6 个技能" : "9 个技能"} note="脚本已完成安全检查" />
+            <AssetRow icon={SquareTerminal} name="Prompts 提示词" value="3 个模板" note="自动适配目标软件" />
+            <AssetRow icon={BookOpen} name="会话记忆与知识库" value="18 条 + 2 个库" note="保留来源和访问权限" />
           </div>
         </Panel>
         <Panel>
           <PanelHead eyebrow="TARGETS" title="目标软件" />
           <MigrationTarget name="Codex" version="本机" exact="11" adapted="2" unsupported="0" status="已部署" />
           <MigrationTarget name="Claude Code" version="本机" exact="9" adapted="3" unsupported="1" status="有更新" />
-          <div className="panel-footer"><span>Secret 不计入迁移资产</span><button type="button" onClick={() => onAction("迁移 diff 已生成")}>查看完整 diff</button></div>
+          <div className="panel-footer"><span>账号密钥不会被迁移</span><button type="button" onClick={() => onAction("迁移前后差异已生成")}>查看迁移差异</button></div>
         </Panel>
       </div>
       <Panel className="migration-report">
@@ -252,7 +255,7 @@ function Billing({ onAction }: { onAction: (message: string) => void }) {
   const bars = [24, 38, 31, 52, 45, 67, 58, 76, 62, 88, 71, 82, 64, 91];
   return (
     <>
-      <PageHead kicker="USAGE & BILLING" title="用量与计费" description="统一余额与外部费用分开，任一扣费都能追到实际模型、线路和价格版本。" action={<button className="button button-primary compact-button" type="button" onClick={() => onAction("充值流程仅作预览，未发起真实支付")}>充值</button>} />
+      <PageHead kicker="USAGE & BILLING" title="费用" description="Moyusi 余额和其他平台直接收取的费用分开显示，每笔费用都能查到模型与来源。" action={<button className="button button-primary compact-button" type="button" onClick={() => onAction("充值流程仅作预览，未发起真实支付")}>充值</button>} />
       <div className="workspace-stats"><Metric label="可用余额" value="¥ 80.00" note="统一余额" /><Metric label="本期费用" value="¥ 28.40" note="较上期 -8%" /><Metric label="外部估算" value="¥ 6.20" note="BYOK 不代扣" /><Metric label="预算使用" value="36%" note="¥ 120 上限" /></div>
       <Panel className="usage-panel"><PanelHead eyebrow="14 DAYS" title="每日费用" action={<strong>¥ 28.40</strong>} /><div className="usage-bars">{bars.map((height, index) => <span key={index} style={{ height: `${height}%` }} title={`第 ${index + 1} 天`} />)}</div></Panel>
       <Panel><PanelHead eyebrow="RECENT REQUESTS" title="最近请求" /><div className="usage-row usage-row-head"><span>请求</span><span>模型 / 线路</span><span>Token</span><span>延迟</span><span>费用</span></div><UsageRow id="req_8FK2" model="GPT · Coding" route="稳定 · 统一余额" tokens="18.4K" latency="2.7s" cost="¥ 0.18" /><UsageRow id="req_7QD9" model="Qwen Coder" route="共享算力 · FP8" tokens="32.1K" latency="3.1s" cost="¥ 0.07" /><UsageRow id="req_6MV4" model="Gemini Flash" route="BYOK · 外部" tokens="9.2K" latency="1.8s" cost="估算 ¥ 0.04" /></Panel>
@@ -268,7 +271,7 @@ function Account({ onAction }: { onAction: (message: string) => void }) {
         <Panel><PanelHead eyebrow="SECURITY" title="登录与安全" /><SettingRow label="邮箱" value="user@example.com" /><SettingRow label="多因素认证" value="未启用" /><SettingRow label="活跃会话" value="2 个" /><div className="panel-footer"><span>最近登录：上海 · 今天</span><button type="button" onClick={() => onAction("安全设置已打开")}>管理</button></div></Panel>
         <Panel><PanelHead eyebrow="DEVICES" title="设备" /><SourceRow name="MacBook Pro" meta="macOS · Desktop 0.1" status="当前设备" /><SourceRow name="Workstation" meta="Windows · 2 天前在线" status="已连接" /><button className="source-add" type="button" onClick={() => onAction("设备连接码已生成")}>连接新设备 <ChevronRight size={13} /></button></Panel>
       </div>
-      <Panel><PanelHead eyebrow="DATA & PRIVACY" title="数据与隐私" /><SettingRow label="请求正文" value="默认不持久化" /><SettingRow label="工作环境同步" value="仅非敏感资产" /><SettingRow label="记忆自动提取" value="关闭" /><SettingRow label="导出" value="不包含明文 Secret" /></Panel>
+      <Panel><PanelHead eyebrow="DATA & PRIVACY" title="数据与隐私" /><SettingRow label="保存请求正文" value="默认不保存" /><SettingRow label="AI 配置同步" value="只同步非敏感内容" /><SettingRow label="自动生成记忆" value="关闭" /><SettingRow label="导出" value="不包含账号密钥" /></Panel>
     </>
   );
 }

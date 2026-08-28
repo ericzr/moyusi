@@ -6,6 +6,7 @@ export type SupplyOption = {
   name: string;
   mode: OfferType;
   price: string;
+  latency: string;
   health: string;
   note: string;
   recommended?: boolean;
@@ -26,6 +27,7 @@ export type ModelOffer = {
   protocol: string;
   price: string;
   unit: string;
+  latency: string;
   route: string;
   health: string;
   meta: string;
