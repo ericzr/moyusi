@@ -30,7 +30,6 @@ export default function App() {
         <button className="brand" type="button" onClick={() => setPage("market")} aria-label="返回 Moyusi 模型广场">
           <img className="brand-logo brand-logo-light" src="/brand/moyusi-light.png" alt="Moyusi" />
           <img className="brand-logo brand-logo-dark" src="/brand/moyusi-dark.png" alt="Moyusi" />
-          <span className="preview-pill">PREVIEW</span>
         </button>
 
         <nav className="primary-nav" aria-label="主导航">

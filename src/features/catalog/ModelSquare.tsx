@@ -22,7 +22,6 @@ export function ModelSquare({ onOpenWorkspace }: { onOpenWorkspace: (offer?: Mod
     <main className="market-page">
       <section className="market-hero">
         <div className="hero-copy">
-          <span className="section-kicker">MODEL ACCESS, WITHOUT THE SWITCHING COST</span>
           <h1>一处选模型，<br />一键带走工作环境。</h1>
           <p>闭源 API、开放模型算力与自有端点在同一个目录里比较。接入后，路由、MCP、Skills 和 Prompts 跟随你的工作环境进入工具。</p>
           <div className="hero-actions">
@@ -56,7 +55,6 @@ export function ModelSquare({ onOpenWorkspace }: { onOpenWorkspace: (offer?: Mod
       <section className="catalog-section" id="catalog">
         <div className="catalog-heading">
           <div>
-            <span className="section-kicker">CURATED CATALOG</span>
             <h2>模型广场</h2>
             <p>按能力选择，再比较真实供给方式。以下名称与报价均为界面演示数据。</p>
           </div>

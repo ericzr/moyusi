@@ -1,7 +1,6 @@
 .workspace-page { width: min(1400px, 100%); min-height: calc(100vh - 68px); display: grid; grid-template-columns: 210px minmax(0, 1fr); margin: 0 auto; }
 .workspace-sidebar { position: sticky; top: 68px; height: calc(100vh - 68px); display: flex; flex-direction: column; padding: 30px 18px 20px; border-right: 1px solid var(--line); }
 .workspace-label { display: flex; flex-direction: column; gap: 6px; padding: 0 9px 24px; }
-.workspace-label span { color: var(--text-faint); font: 650 8px/1 ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: .14em; }
 .workspace-label strong { font-size: 13px; font-weight: 660; }
 .workspace-sidebar nav { display: flex; flex-direction: column; gap: 3px; }
 .workspace-sidebar nav button { width: 100%; min-height: 36px; display: grid; grid-template-columns: 18px 1fr auto; align-items: center; gap: 8px; padding: 0 9px; border: 1px solid transparent; border-radius: 7px; background: transparent; color: var(--text-muted); text-align: left; font-size: 10px; }
@@ -15,7 +14,7 @@
 
 .workspace-content { min-width: 0; padding: 52px clamp(24px, 4vw, 62px) 90px; }
 .workspace-page-head { min-height: 112px; display: flex; align-items: flex-start; justify-content: space-between; gap: 24px; margin-bottom: 26px; }
-.workspace-page-head h1 { margin: 10px 0 9px; font-size: clamp(32px, 4vw, 46px); font-weight: 540; letter-spacing: -.05em; }
+.workspace-page-head h1 { margin: 0 0 9px; font-size: clamp(32px, 4vw, 46px); font-weight: 540; letter-spacing: -.05em; }
 .workspace-page-head p { max-width: 660px; margin: 0; color: var(--text-muted); font-size: 12px; line-height: 1.75; }
 .workspace-ready, .inline-status { display: inline-flex; align-items: center; gap: 6px; color: var(--ok); font: 650 8px/1 ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: .08em; }
 .compact-button { min-height: 34px; flex: 0 0 auto; }
@@ -28,8 +27,7 @@
 .overview-grid, .two-column-panels, .source-grid, .environment-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; margin-bottom: 14px; }
 .workspace-panel { min-width: 0; padding: 18px; border: 1px solid var(--line); border-radius: var(--radius-md); background: var(--surface); }
 .panel-head { min-height: 42px; display: flex; align-items: flex-start; justify-content: space-between; gap: 18px; }
-.panel-head > div > span { color: var(--text-faint); font: 650 8px/1 ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: .13em; }
-.panel-head h2 { margin: 7px 0 0; font-size: 13px; font-weight: 650; }
+.panel-head h2 { margin: 0; font-size: 13px; font-weight: 650; }
 .panel-head button { display: inline-flex; align-items: center; gap: 4px; padding: 0; border: 0; background: transparent; color: var(--text-muted); font-size: 9px; }
 .panel-head > span, .panel-head > strong { color: var(--text-faint); font: 620 9px/1 ui-monospace, SFMono-Regular, Menlo, monospace; }
 .route-path { min-height: 160px; display: grid; grid-template-columns: 1fr auto 1fr auto 1fr; align-items: center; gap: 8px; }

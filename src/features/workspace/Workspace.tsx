@@ -56,7 +56,6 @@ export function Workspace({ pendingOffer, onBrowseModels }: { pendingOffer: Mode
     <main className="workspace-page">
       <aside className="workspace-sidebar">
         <div className="workspace-label">
-          <span>WORKSPACE</span>
           <strong>个人空间</strong>
         </div>
         <nav aria-label="工作台子导航">
@@ -89,10 +88,10 @@ export function Workspace({ pendingOffer, onBrowseModels }: { pendingOffer: Mode
   );
 }
 
-function PageHead({ kicker, title, description, action }: { kicker: string; title: string; description: string; action?: ReactNode }) {
+function PageHead({ title, description, action }: { kicker: string; title: string; description: string; action?: ReactNode }) {
   return (
     <header className="workspace-page-head">
-      <div><span className="section-kicker">{kicker}</span><h1>{title}</h1><p>{description}</p></div>
+      <div><h1>{title}</h1><p>{description}</p></div>
       {action}
     </header>
   );
@@ -262,7 +261,7 @@ function Account({ onAction }: { onAction: (message: string) => void }) {
 }
 
 function Panel({ children, className = "" }: { children: ReactNode; className?: string }) { return <section className={`workspace-panel ${className}`.trim()}>{children}</section>; }
-function PanelHead({ eyebrow, title, action }: { eyebrow: string; title: string; action?: ReactNode }) { return <div className="panel-head"><div><span>{eyebrow}</span><h2>{title}</h2></div>{action}</div>; }
+function PanelHead({ title, action }: { eyebrow: string; title: string; action?: ReactNode }) { return <div className="panel-head"><div><h2>{title}</h2></div>{action}</div>; }
 function Metric({ label, value, note }: { label: string; value: string; note: string }) { return <div className="workspace-metric"><span>{label}</span><strong>{value}</strong><small>{note}</small></div>; }
 function RouteNode({ icon: Icon, label, detail, active = false }: { icon: LucideIcon; label: string; detail: string; active?: boolean }) { return <div className="route-node" data-active={active}><Icon size={17} /><div><strong>{label}</strong><span>{detail}</span></div></div>; }
 function AssetCount({ icon: Icon, label, value }: { icon: LucideIcon; label: string; value: string }) { return <div><Icon size={15} /><span>{label}</span><strong>{value}</strong></div>; }
