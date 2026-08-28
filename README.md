@@ -23,6 +23,7 @@ Moyusi 是一个“极简的 AI 工具控制台 + 模型与算力购买 + AI 工
 - [开放模型供给与可迁移 AI 工作环境](./docs/09-open-models-portable-workspace.md)
 - [前端产品架构与交付计划](./docs/10-frontend-architecture-and-delivery-plan.md)
 - [产品架构与开发主线](./docs/11-development-mainline.md)
+- [Stage 2 首条纵向切片](./docs/12-stage2-vertical-slice.md)
 - [仓库开发约束](./guidelines/Guidelines.md)
 
 ## 当前原型
@@ -38,7 +39,7 @@ pnpm check
 ## 状态
 
 - 文档基线：2026-08-28
-- 产品阶段：Stage 1 前端工程基线
+- 产品阶段：Stage 2 本地 mock 纵向闭环
 - 生产数据：无
 - 生产后端：无
 - 生产桌面端：无

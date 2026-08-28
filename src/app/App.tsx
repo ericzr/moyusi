@@ -4,6 +4,7 @@ import { Navigate, Route, Routes, useLocation, useNavigate, useParams } from "re
 import { getAccessFlow, isWorkspaceSection } from "../domain/accessPolicy";
 import { ModelDetailPage, ModelSquare } from "../features/catalog/ModelSquare";
 import { Workspace } from "../features/workspace/Workspace";
+import { useDemoPlatform, type DemoPlatformController } from "../features/workspace/useDemoPlatform";
 import { catalogRepository } from "../services/catalogRepository";
 import { workspaceSelectionPath } from "./selectionUrl";
 
@@ -17,6 +18,7 @@ function readInitialTheme(): Theme {
 
 export default function App() {
   const [theme, setTheme] = useState<Theme>(readInitialTheme);
+  const demoPlatform = useDemoPlatform();
   const location = useLocation();
   const navigate = useNavigate();
   const productPage = location.pathname.startsWith("/workspace") ? "workspace" : "market";
@@ -43,7 +45,7 @@ export default function App() {
         <div className="topbar-actions">
           <button className="balance-button" type="button" onClick={() => navigate("/workspace/billing")}>
             <Wallet size={14} aria-hidden="true" />
-            <span>¥ 80.00</span>
+            <span>¥ {demoPlatform.billing.availableBalanceCny.toFixed(2)}</span>
           </button>
           <button
             className="icon-button"
@@ -64,7 +66,7 @@ export default function App() {
         <Route path="/market" element={<ModelSquare onOpenDetail={(modelId) => navigate(`/market/${modelId}`)} />} />
         <Route path="/market/:modelId" element={<ModelDetailRoute />} />
         <Route path="/workspace" element={<Navigate to="/workspace/overview" replace />} />
-        <Route path="/workspace/:section" element={<WorkspaceRoute />} />
+        <Route path="/workspace/:section" element={<WorkspaceRoute platform={demoPlatform} />} />
         <Route path="*" element={<Navigate to="/market" replace />} />
       </Routes>
     </div>
@@ -83,7 +85,7 @@ function ModelDetailRoute() {
   );
 }
 
-function WorkspaceRoute() {
+function WorkspaceRoute({ platform }: { platform: DemoPlatformController }) {
   const { section } = useParams();
   const location = useLocation();
   const navigate = useNavigate();
@@ -99,6 +101,11 @@ function WorkspaceRoute() {
     <Workspace
       section={section}
       pendingSelection={activeSelection}
+      platform={platform}
+      onActivateSelection={async (selection) => {
+        await platform.activate(selection);
+        navigate("/workspace/routing", { replace: true });
+      }}
       onNavigate={(nextSection) => navigate(`/workspace/${nextSection}${selectionSection === nextSection ? location.search : ""}`)}
       onBrowseModels={() => navigate("/market")}
     />
