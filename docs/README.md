@@ -18,6 +18,7 @@
 12. [10-frontend-architecture-and-delivery-plan.md](./10-frontend-architecture-and-delivery-plan.md)：当前前端模块、URL、状态边界、迭代阶段与发布门。
 13. [11-development-mainline.md](./11-development-mainline.md)：冻结后的产品/系统架构、供给经营策略、五条开发主线和阶段退出标准。
 14. [12-stage2-vertical-slice.md](./12-stage2-vertical-slice.md)：模型来源选择、一键切换、可恢复路由、模拟调用与费用记录的首条纵向闭环。
+15. [13-web-desktop-boundary.md](./13-web-desktop-boundary.md)：CC Switch 能力拆解、网页与桌面端边界及轻量桥接决策。
 
 ## 当前冻结的产品决策
 

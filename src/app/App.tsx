@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { CircleUserRound, Moon, Sun, Wallet } from "lucide-react";
+import { LayoutDashboard, Moon, Sun } from "lucide-react";
 import { Navigate, Route, Routes, useLocation, useNavigate, useParams } from "react-router";
 import { getAccessFlow, isWorkspaceSection } from "../domain/accessPolicy";
 import { ModelDetailPage, ModelSquare } from "../features/catalog/ModelSquare";
@@ -39,15 +39,10 @@ export default function App() {
           <img className="brand-logo brand-logo-dark" src={`${assetBase}brand/moyusi-dark.png`} alt="Moyusi" />
         </button>
 
-        <nav className="primary-nav" aria-label="主导航">
-          <button type="button" data-active={productPage === "market"} onClick={() => navigate("/market")}>模型广场</button>
-          <button type="button" data-active={productPage === "workspace"} onClick={() => navigate("/workspace/overview")}>工作台</button>
-        </nav>
-
         <div className="topbar-actions">
-          <button className="balance-button" type="button" onClick={() => navigate("/workspace/billing")}>
-            <Wallet size={14} aria-hidden="true" />
-            <span>¥ {demoPlatform.billing.availableBalanceCny.toFixed(2)}</span>
+          <button className="workspace-entry" type="button" data-active={productPage === "workspace"} onClick={() => navigate("/workspace/overview")}>
+            <LayoutDashboard size={15} aria-hidden="true" />
+            <span>工作台</span>
           </button>
           <button
             className="icon-button"
@@ -56,9 +51,6 @@ export default function App() {
             aria-label={theme === "dark" ? "切换到日间模式" : "切换到夜间模式"}
           >
             {theme === "dark" ? <Sun size={16} /> : <Moon size={16} />}
-          </button>
-          <button className="icon-button account-button" type="button" aria-label="账户" onClick={() => navigate("/workspace/account")}>
-            <CircleUserRound size={17} />
           </button>
         </div>
       </header>
