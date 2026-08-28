@@ -1,0 +1,29 @@
+
+  <!DOCTYPE html>
+  <html lang="zh-CN">
+    <head>
+      
+      <meta charset="UTF-8" />
+      <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+      <title>Moyusi · 模型访问与 AI 工作环境</title>
+      <meta name="description" content="在一个极简工作台中选择闭源 API、开放模型算力，并迁移你的 AI 工作环境。" />
+      <meta name="robots" content="noindex, nofollow" />
+      <script>
+        try {
+          const savedTheme = localStorage.getItem("moyusi-theme");
+          const theme = savedTheme || (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+          document.documentElement.dataset.theme = theme;
+        } catch (_) {}
+      </script>
+      <style>html, body { height: 100%; margin: 0; } #root { height: 100%; }</style>
+      
+    </head>
+
+    <body>
+      
+      <div id="root"></div>
+      <script type="module" src="/src/main.tsx"></script>
+      
+    </body>
+  </html>
+  
