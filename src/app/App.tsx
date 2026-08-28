@@ -10,6 +10,8 @@ import { workspaceSelectionPath } from "./selectionUrl";
 
 export type Theme = "light" | "dark";
 
+const assetBase = import.meta.env.BASE_URL;
+
 function readInitialTheme(): Theme {
   const saved = window.localStorage.getItem("moyusi-theme");
   if (saved === "light" || saved === "dark") return saved;
@@ -33,8 +35,8 @@ export default function App() {
     <div className="app-shell">
       <header className="topbar">
         <button className="brand" type="button" onClick={() => navigate("/market")} aria-label="返回 Moyusi 模型广场">
-          <img className="brand-logo brand-logo-light" src="/brand/moyusi-light.png" alt="Moyusi" />
-          <img className="brand-logo brand-logo-dark" src="/brand/moyusi-dark.png" alt="Moyusi" />
+          <img className="brand-logo brand-logo-light" src={`${assetBase}brand/moyusi-light.png`} alt="Moyusi" />
+          <img className="brand-logo brand-logo-dark" src={`${assetBase}brand/moyusi-dark.png`} alt="Moyusi" />
         </button>
 
         <nav className="primary-nav" aria-label="主导航">

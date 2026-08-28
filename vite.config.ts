@@ -17,5 +17,7 @@ function staticWorker() {
 }
 
 export default defineConfig({
+  // GitHub Pages serves the app from /moyusi/, while local/Sites previews use /.
+  base: process.env.GITHUB_ACTIONS === "true" ? "/moyusi/" : "/",
   plugins: [react(), sites(), staticWorker()],
 });
