@@ -9,13 +9,12 @@ import {
   MessageSquareText,
   Rows3,
   Search,
-  TableProperties,
   Video,
 } from "lucide-react";
 import { MODEL_OFFERS, type ModelKind, type ModelModality, type ModelOffer } from "./catalogData";
 
 type Filter = "全部供给" | ModelKind;
-type ViewMode = "compact" | "cards" | "compare";
+type ViewMode = "compact" | "cards";
 
 const MODALITIES: Array<{
   id: ModelModality;
@@ -30,7 +29,6 @@ const MODALITIES: Array<{
 const VIEWS: Array<{ id: ViewMode; label: string; Icon: typeof Rows3 }> = [
   { id: "compact", label: "紧凑列表", Icon: Rows3 },
   { id: "cards", label: "卡片", Icon: LayoutGrid },
-  { id: "compare", label: "对比", Icon: TableProperties },
 ];
 
 export function ModelSquare({ onOpenWorkspace }: { onOpenWorkspace: (offer?: ModelOffer) => void }) {
@@ -38,7 +36,6 @@ export function ModelSquare({ onOpenWorkspace }: { onOpenWorkspace: (offer?: Mod
   const [filter, setFilter] = useState<Filter>("全部供给");
   const [view, setView] = useState<ViewMode>("compact");
   const [query, setQuery] = useState("");
-  const [selectedId, setSelectedId] = useState(MODEL_OFFERS[0].id);
   const [prepared, setPrepared] = useState<ModelOffer | null>(null);
 
   const offers = useMemo(() => {
@@ -51,15 +48,12 @@ export function ModelSquare({ onOpenWorkspace }: { onOpenWorkspace: (offer?: Mod
     });
   }, [filter, modality, query]);
 
-  const selected = offers.find((offer) => offer.id === selectedId) ?? offers[0] ?? null;
   const sourceCount = offers.reduce((total, offer) => total + offer.sources.length, 0);
 
   const chooseModality = (next: ModelModality) => {
     setModality(next);
     setFilter("全部供给");
     setQuery("");
-    const first = MODEL_OFFERS.find((offer) => offer.modality === next);
-    if (first) setSelectedId(first.id);
   };
 
   return (
@@ -104,11 +98,9 @@ export function ModelSquare({ onOpenWorkspace }: { onOpenWorkspace: (offer?: Mod
           <span>报价与状态为演示数据</span>
         </div>
 
-        <div className="catalog-layout" data-view={view}>
-          {view === "compact" && <CompactResults offers={offers} selected={selected} onSelect={setSelectedId} />}
-          {view === "cards" && <CardResults offers={offers} selected={selected} onSelect={setSelectedId} />}
-          {view === "compare" && <CompareResults offers={offers} onPrepare={setPrepared} />}
-          {view !== "compare" && <ModelInspector selected={selected} onPrepare={setPrepared} />}
+        <div className="catalog-layout">
+          {view === "compact" && <CompactResults offers={offers} onPrepare={setPrepared} />}
+          {view === "cards" && <CardResults offers={offers} onPrepare={setPrepared} />}
         </div>
       </section>
 
@@ -122,23 +114,24 @@ export function ModelSquare({ onOpenWorkspace }: { onOpenWorkspace: (offer?: Mod
   );
 }
 
-function CompactResults({ offers, selected, onSelect }: { offers: ModelOffer[]; selected: ModelOffer | null; onSelect: (id: string) => void }) {
+function CompactResults({ offers, onPrepare }: { offers: ModelOffer[]; onPrepare: (offer: ModelOffer) => void }) {
   return (
     <div className="catalog-results">
-      <div className="result-header" aria-hidden="true"><span>模型</span><span>供给</span><span>能力</span><span>起始价格</span><span>状态</span><span /></div>
+      <div className="result-header" aria-hidden="true"><span>模型</span><span>供给</span><span>能力</span><span>协议</span><span>起始价格</span><span>状态</span><span>操作</span></div>
       <div className="offer-list">
         {offers.map((offer) => (
-          <button className="offer-row" data-selected={selected?.id === offer.id} key={offer.id} type="button" onClick={() => onSelect(offer.id)}>
+          <article className="offer-row" key={offer.id}>
             <span className="model-identity">
               <span className="model-glyph" aria-hidden="true">{offer.kind === "开放权重" ? <Cpu size={15} /> : <Code2 size={15} />}</span>
               <span><span className="model-title-line"><strong>{offer.name}</strong><small>{offer.family}</small></span><span className="model-summary">{offer.summary}</span></span>
             </span>
             <span className="offer-fact"><small>{offer.kind}</small><strong>{offer.offerType}</strong><em>{offer.sources.length} 个来源</em></span>
-            <span className="offer-fact"><small>{offer.specLabel}</small><strong>{offer.specValue}</strong><em>{offer.protocol}</em></span>
+            <span className="offer-fact"><small>{offer.specLabel}</small><strong>{offer.specValue}</strong></span>
+            <span className="offer-protocol"><strong>{offer.protocol}</strong><small>{offer.sources.length} 个来源可用</small></span>
             <span className="offer-price"><strong>{offer.price}</strong><small>{offer.unit}</small></span>
             <span className="offer-health"><strong><i />{offer.health}</strong><small>24h 窗口</small></span>
-            <ChevronRight className="row-arrow" size={14} />
-          </button>
+            <button className="row-action" type="button" onClick={() => onPrepare(offer)}>配置<ChevronRight size={12} /></button>
+          </article>
         ))}
         {offers.length === 0 && <EmptyResults />}
       </div>
@@ -146,12 +139,12 @@ function CompactResults({ offers, selected, onSelect }: { offers: ModelOffer[]; 
   );
 }
 
-function CardResults({ offers, selected, onSelect }: { offers: ModelOffer[]; selected: ModelOffer | null; onSelect: (id: string) => void }) {
+function CardResults({ offers, onPrepare }: { offers: ModelOffer[]; onPrepare: (offer: ModelOffer) => void }) {
   if (offers.length === 0) return <div className="catalog-results"><EmptyResults /></div>;
   return (
     <div className="model-card-grid">
       {offers.map((offer) => (
-        <button className="model-card" data-selected={selected?.id === offer.id} key={offer.id} type="button" onClick={() => onSelect(offer.id)}>
+        <article className="model-card" key={offer.id}>
           <span className="model-card-head">
             <span><strong>{offer.name}</strong><small>{offer.family}</small></span>
             <em>{offer.kind}</em>
@@ -163,60 +156,10 @@ function CardResults({ offers, selected, onSelect }: { offers: ModelOffer[]; sel
             <span><small>状态</small><strong className="card-health"><i />{offer.health}</strong></span>
             <span><small>供给来源</small><strong>{offer.sources.length} 个</strong></span>
           </span>
-        </button>
+          <span className="model-card-footer"><small>{offer.protocol}</small><button type="button" onClick={() => onPrepare(offer)}>配置<ChevronRight size={12} /></button></span>
+        </article>
       ))}
     </div>
-  );
-}
-
-function CompareResults({ offers, onPrepare }: { offers: ModelOffer[]; onPrepare: (offer: ModelOffer) => void }) {
-  if (offers.length === 0) return <div className="compare-view"><EmptyResults /></div>;
-  return (
-    <div className="compare-view">
-      <div className="compare-grid" style={{ gridTemplateColumns: `120px repeat(${offers.length}, minmax(160px, 1fr))` }}>
-        <span className="compare-label">模型</span>
-        {offers.map((offer) => <div className="compare-model" key={`${offer.id}-name`}><strong>{offer.name}</strong><small>{offer.family}</small></div>)}
-        <span className="compare-label">类型</span>{offers.map((offer) => <span key={`${offer.id}-kind`}>{offer.kind}</span>)}
-        <span className="compare-label">起始供给</span>{offers.map((offer) => <span key={`${offer.id}-offer`}>{offer.offerType}</span>)}
-        <span className="compare-label">{offers[0]?.specLabel ?? "能力"}</span>{offers.map((offer) => <strong key={`${offer.id}-spec`}>{offer.specValue}</strong>)}
-        <span className="compare-label">兼容协议</span>{offers.map((offer) => <span key={`${offer.id}-protocol`}>{offer.protocol}</span>)}
-        <span className="compare-label">起始价格</span>{offers.map((offer) => <strong className="compare-price" key={`${offer.id}-price`}>{offer.price}</strong>)}
-        <span className="compare-label">24h 状态</span>{offers.map((offer) => <span className="compare-health" key={`${offer.id}-health`}><i />{offer.health}</span>)}
-        <span className="compare-label">供给来源</span>{offers.map((offer) => <span key={`${offer.id}-sources`}>{offer.sources.length} 个</span>)}
-        <span className="compare-label">操作</span>{offers.map((offer) => <button className="compare-action" type="button" key={`${offer.id}-action`} onClick={() => onPrepare(offer)}>选择模型</button>)}
-      </div>
-    </div>
-  );
-}
-
-function ModelInspector({ selected, onPrepare }: { selected: ModelOffer | null; onPrepare: (offer: ModelOffer) => void }) {
-  if (!selected) return <aside className="model-inspector"><div className="inspector-empty">选择一个模型查看供给方式。</div></aside>;
-  return (
-    <aside className="model-inspector" aria-live="polite">
-      <div className="inspector-heading">
-        <span className="model-glyph">{selected.kind === "开放权重" ? <Cpu size={16} /> : <Code2 size={16} />}</span>
-        <div><strong>{selected.name}</strong><span>{selected.family} · {selected.kind}</span></div>
-      </div>
-      <code className="model-id">{selected.modelId}</code>
-      <dl className="model-specs">
-        <div><dt>{selected.specLabel}</dt><dd>{selected.specValue}</dd></div>
-        <div><dt>协议</dt><dd>{selected.protocol}</dd></div>
-      </dl>
-      <div className="source-heading"><strong>可用供给</strong><span>{selected.sources.length} 个</span></div>
-      <div className="source-options">
-        {selected.sources.map((source) => (
-          <div className="source-option" key={`${selected.id}-${source.name}`}>
-            <div><strong>{source.name}</strong>{source.recommended && <span>推荐</span>}</div>
-            <small>{source.mode} · {source.note}</small>
-            <div><b>{source.price}</b><em><i />{source.health}</em></div>
-          </div>
-        ))}
-      </div>
-      <div className="inspector-footer">
-        <small>生产版显示真实来源、条款与探测时间。</small>
-        <button className="button button-primary compact-button" type="button" onClick={() => onPrepare(selected)}>选择并配置</button>
-      </div>
-    </aside>
   );
 }
 
