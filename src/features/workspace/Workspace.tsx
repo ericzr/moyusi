@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import {
   Activity,
   AlertCircle,
@@ -31,6 +31,8 @@ import { getAccessFlow, type WorkspaceSection } from "../../domain/accessPolicy"
 import type { CatalogSelection } from "../../domain/catalog";
 import type { ActiveRoute, DesktopConnection, RoutePolicy, RouteStrategy, UsageEvent } from "../../domain/demoPlatform";
 import type { ByokProvider, MigrationOutcome, MigrationTarget } from "../../domain/portableWorkspace";
+import { DEMO_PROVIDER_PROFILES, DEMO_PROVIDER_SOURCES, providerModeLabel, providerStatusLabel, providerStatusTone, type ProviderProfile, type ProviderSource } from "../../domain/provider";
+import { catalogRepository } from "../../services/catalogRepository";
 import type { DemoPlatformController } from "./useDemoPlatform";
 import { useDemoPortableWorkspace, type DemoPortableWorkspaceController } from "./useDemoPortableWorkspace";
 import { useWorkspaceSummary } from "./useWorkspaceSummary";
@@ -75,6 +77,7 @@ export function Workspace({
   onBrowseModels: () => void;
 }) {
   const [notice, setNotice] = useState<string | null>(null);
+  const [profiles, setProfiles] = useState<ProviderProfile[]>(readProviderProfiles);
   const portableWorkspace = useDemoPortableWorkspace();
   const summaryResource = useWorkspaceSummary(platform.state);
   const summary = summaryResource.data;
@@ -83,6 +86,18 @@ export function Workspace({
   function act(message: string) {
     setNotice(message);
     window.setTimeout(() => setNotice((current) => (current === message ? null : current)), 1800);
+  }
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem("moyusi-provider-profiles-v1", JSON.stringify(profiles));
+    } catch {
+      // The preview remains usable when storage is unavailable.
+    }
+  }, [profiles]);
+
+  function updateProfile(profile: ProviderProfile) {
+    setProfiles((current) => current.map((item) => item.id === profile.id ? profile : item));
   }
 
   return (
@@ -115,7 +130,7 @@ export function Workspace({
         {pendingSelection && <PendingSelection selection={pendingSelection} onActivate={onActivateSelection} onAction={act} />}
         {section === "overview" && <Overview activeRoute={platform.state.activeRoute} periodCost={platform.billing.periodCostCny} requestCount={platform.billing.requestCount} routePolicy={platform.state.routePolicy} connectedTools={summary?.activeTools ?? platform.state.connectedTools} pendingAttention={summary?.pendingAttention ?? 2} desktop={desktop} onNavigate={onNavigate} onSimulateCall={platform.simulateCall} onAction={act} />}
         {section === "routing" && <Routing activeRoute={platform.state.activeRoute} previousRoute={platform.state.previousRoute} routePolicy={platform.state.routePolicy} desktop={desktop} onBrowseModels={onBrowseModels} onSimulateCall={platform.simulateCall} onRestore={platform.restore} onUpdatePolicy={platform.updateRoutePolicy} onAction={act} />}
-        {section === "sources" && <Sources workspace={portableWorkspace} onAction={act} />}
+        {section === "sources" && <Sources workspace={portableWorkspace} profiles={profiles} onUpdateProfile={updateProfile} onAction={act} />}
         {section === "deployments" && <Deployments onBrowseModels={onBrowseModels} onAction={act} />}
         {section === "tools" && <Tools desktop={desktop} connectedTools={summary?.activeTools ?? platform.state.connectedTools} onAction={act} />}
         {section === "environment" && <Environment workspace={portableWorkspace} onAction={act} />}
@@ -225,11 +240,15 @@ function Overview({ activeRoute, periodCost, requestCount, routePolicy, connecte
 
 function Routing({ activeRoute, previousRoute, routePolicy, desktop, onBrowseModels, onSimulateCall, onRestore, onUpdatePolicy, onAction }: { activeRoute: ActiveRoute; previousRoute: ActiveRoute | null; routePolicy: RoutePolicy; desktop: DesktopConnection; onBrowseModels: () => void; onSimulateCall: () => Promise<UsageEvent>; onRestore: () => void; onUpdatePolicy: (patch: Partial<Omit<RoutePolicy, "saveRequestBodies">>) => void; onAction: (message: string) => void }) {
   const [testing, setTesting] = useState(false);
-  const fallbacks = [
-    { name: "GPT · Coding", meta: "统一余额 · 稳定来源", health: "99.95%" },
-    { name: "Claude Sonnet", meta: "统一余额 · 同任务备用", health: "99.92%" },
-    { name: "Qwen Coder", meta: "共享算力 · 开放权重", health: "99.76%" },
-  ].filter((route) => route.name !== activeRoute.modelName).slice(0, 2);
+  const activeOffer = catalogRepository.getById(activeRoute.modelId);
+  const fallbacks = activeOffer?.sources
+    .filter((source) => source.name !== activeRoute.sourceName)
+    .slice(0, 2)
+    .map((source) => ({
+      name: activeRoute.modelName,
+      meta: `${source.mode} · ${source.name} · ${source.latency}`,
+      health: source.health,
+    })) ?? [];
 
   async function simulate() {
     setTesting(true);
@@ -255,7 +274,7 @@ function Routing({ activeRoute, previousRoute, routePolicy, desktop, onBrowseMod
       <PageHead kicker="ROUTING" title="模型切换" description="选择使用场景和模型来源。切换前会先检查可用性，并保留原配置用于恢复。" action={<button className="button button-primary compact-button" type="button" onClick={onBrowseModels}>从广场选择模型</button>} />
       <DesktopBridge desktop={desktop} />
       <Panel>
-        <PanelHead eyebrow="PROVIDER PROFILE" title={`${toolLabel(activeRoute)} · 当前模型`} action={<span className="inline-status"><i />正在使用</span>} />
+        <PanelHead eyebrow="PROVIDER PROFILE" title={`${toolLabel(activeRoute)} · 当前模型`} action={<span className="inline-status"><i />{fallbacks.length} 个备用来源</span>} />
         <div className="strategy-bar">
           <div><strong>路由策略</strong><small>{routeStrategyDescription(routePolicy.strategy)}</small></div>
           <label><span className="visually-hidden">选择路由策略</span><select value={routePolicy.strategy} onChange={(event) => { onUpdatePolicy({ strategy: event.target.value as RouteStrategy }); onAction(`已切换为${routeStrategyLabel(event.target.value as RouteStrategy)}`); }}><option value="auto">自动选择</option><option value="fixed">固定当前来源</option><option value="cost">成本优先</option></select></label>
@@ -288,9 +307,12 @@ function DesktopBridge({ desktop }: { desktop: DesktopConnection }) {
   );
 }
 
-function Sources({ workspace, onAction }: { workspace: DemoPortableWorkspaceController; onAction: (message: string) => void }) {
+function Sources({ workspace, profiles, onUpdateProfile, onAction }: { workspace: DemoPortableWorkspaceController; profiles: ProviderProfile[]; onUpdateProfile: (profile: ProviderProfile) => void; onAction: (message: string) => void }) {
   const [connectOpen, setConnectOpen] = useState(false);
+  const [addOpen, setAddOpen] = useState(false);
   const [provider, setProvider] = useState<ByokProvider>("OpenRouter");
+  const [selectedSource, setSelectedSource] = useState<ProviderSource | null>(null);
+  const [editingProfile, setEditingProfile] = useState<ProviderProfile | null>(null);
   const [connecting, setConnecting] = useState(false);
 
   async function connect() {
@@ -308,14 +330,50 @@ function Sources({ workspace, onAction }: { workspace: DemoPortableWorkspaceCont
 
   return (
     <>
-      <PageHead kicker="API & SOURCES" title="模型来源" description="管理 Moyusi 余额来源和你自己的模型账号。自己的密钥只保存在本机，费用由对应平台收取。" action={<button className="button button-primary compact-button" type="button" onClick={() => onAction("调用密钥创建流程已打开；完整值只显示一次")}>创建调用密钥</button>} />
+      <PageHead kicker="API & SOURCES" title="来源与凭证" description="先选择来源，再决定哪个工具使用它。自己的密钥只保存在本机，费用由对应平台收取。" action={<div className="head-actions"><button className="button button-quiet compact-button" type="button" onClick={() => setAddOpen(true)}>添加来源</button><button className="button button-primary compact-button" type="button" onClick={() => onAction("调用密钥创建流程已打开；完整值只显示一次")}>创建调用密钥</button></div>} />
+      <div className="provider-source-list">
+        <Panel><PanelHead eyebrow="SOURCES" title={`${DEMO_PROVIDER_SOURCES.length} 个来源`} action={<span>按可用性排序</span>} /><div className="provider-table-head"><span>来源</span><span>结算</span><span>协议</span><span>状态</span><span>模型</span><span /></div>{DEMO_PROVIDER_SOURCES.map((source) => <ProviderSourceRow key={source.id} source={source} onSelect={() => setSelectedSource(source)} />)}</Panel>
+        <Panel><PanelHead eyebrow="PROVIDER PROFILES" title="工具使用配置" action={<span>{profiles.length} 个 Profile</span>} /><div className="provider-profile-list">{profiles.map((profile) => { const source = DEMO_PROVIDER_SOURCES.find((candidate) => candidate.id === profile.sourceId); return <div className="provider-profile-row" key={profile.id}><span className="profile-tool-icon"><SquareTerminal size={14} /></span><div><strong>{profile.tool}</strong><small>{profile.model} · {source?.name ?? "来源已移除"}</small></div><span className="profile-enabled" data-enabled={profile.enabled}>{profile.enabled ? "已启用" : "未启用"}</span><button type="button" onClick={() => setEditingProfile(profile)}>编辑</button></div>; })}</div><div className="panel-footer"><span>切换来源不会覆盖官方登录</span><button type="button" onClick={() => setEditingProfile(profiles[0] ?? null)}>统一管理</button></div></Panel>
+      </div>
       <div className="source-grid">
         <Panel><PanelHead eyebrow="MOYUSI KEY" title="Moyusi 调用密钥" action={<span className="inline-status"><i />正常</span>} /><div className="key-display"><KeyRound size={17} /><code>moy_••••••••92F1</code><span>今天使用</span></div><SettingRow label="可用模型" value="4 个" /><SettingRow label="每月限额" value="¥ 120.00" /><SettingRow label="有效期" value="长期" /><div className="panel-footer"><span>完整密钥不会再次显示</span><button type="button" onClick={() => onAction("密钥更换流程已准备")}>更换</button></div></Panel>
         <Panel><PanelHead eyebrow="LOCAL BYOK" title="我的模型账号" /><div className="source-list">{workspace.state.connections.map((connection) => <SourceRow key={connection.id} name={connection.provider} meta={connection.scope} status={connection.state === "bound" ? "已连接" : "待授权"} />)}</div><button className="source-add" type="button" onClick={() => setConnectOpen(true)}>连接新的模型账号 <ChevronRight size={13} /></button></Panel>
       </div>
       <div className="security-note"><ShieldCheck size={17} /><div><strong>密钥不会跟随 AI 配置迁移</strong><p>切换设备或软件时只迁移非敏感设置；模型账号需要在新设备上重新确认。</p></div></div>
       {connectOpen && <ByokDialog provider={provider} connecting={connecting} onProviderChange={setProvider} onClose={() => setConnectOpen(false)} onConnect={connect} />}
+      {addOpen && <ProviderPresetDialog onClose={() => setAddOpen(false)} onChoose={(source) => { setAddOpen(false); setSelectedSource(source); onAction(`${source.name} 已加入来源草稿，请继续完成授权或端点连接`); }} />}
+      {selectedSource && <ProviderDetailDialog source={selectedSource} onClose={() => setSelectedSource(null)} onConnect={() => { setSelectedSource(null); selectedSource.mode === "byok" || selectedSource.mode === "direct" ? setConnectOpen(true) : onAction(`${selectedSource.name} 的连接检查已加入 Desktop 队列`); }} />}
+      {editingProfile && <ProviderProfileDialog profile={editingProfile} onClose={() => setEditingProfile(null)} onSave={(profile) => { onUpdateProfile(profile); setEditingProfile(null); onAction(`${profile.tool} 配置已更新，Desktop 将在下次同步时应用`); }} />}
     </>
+  );
+}
+
+function ProviderSourceRow({ source, onSelect }: { source: ProviderSource; onSelect: () => void }) {
+  return <button className="provider-source-row" type="button" onClick={onSelect}><span><strong>{source.name}</strong><small>{source.vendor} · {source.note}</small></span><span>{providerModeLabel(source.mode)}</span><span>{source.protocol}</span><span className="provider-status" data-state={providerStatusTone(source.status)}><i />{providerStatusLabel(source.status)}</span><span>{source.modelCount} 个</span><span><ChevronRight size={14} /></span></button>;
+}
+
+function ProviderPresetDialog({ onClose, onChoose }: { onClose: () => void; onChoose: (source: ProviderSource) => void }) {
+  return <div className="access-dialog-backdrop" role="presentation"><section className="access-dialog provider-dialog" role="dialog" aria-modal="true" aria-labelledby="provider-dialog-title"><header><div><span className="access-flow-icon"><PlugZap size={17} /></span><div><h2 id="provider-dialog-title">添加来源</h2><p>先选一个预设，专业协议字段会在连接检查后自动补齐。</p></div></div><button type="button" aria-label="关闭" onClick={onClose}><X size={15} /></button></header><div className="provider-preset-grid">{DEMO_PROVIDER_SOURCES.map((source) => <button type="button" key={source.id} onClick={() => onChoose(source)}><strong>{source.name}</strong><small>{providerModeLabel(source.mode)} · {source.protocol}</small><span>{source.status === "active" ? "可直接使用" : "需要授权"}</span></button>)}<button type="button" className="provider-preset-custom" onClick={() => onChoose({ id: "custom", name: "自定义来源", vendor: "自定义", mode: "endpoint", status: "draft", protocol: "待检测", health: "待检测", modelCount: 0, note: "OpenAI-compatible / Anthropic" })}><strong>自定义来源</strong><small>填写地址后自动探测协议</small><span>高级</span></button></div><footer><button type="button" onClick={onClose}>取消</button></footer></section></div>;
+}
+
+function ProviderDetailDialog({ source, onClose, onConnect }: { source: ProviderSource; onClose: () => void; onConnect: () => void }) {
+  return <div className="access-dialog-backdrop" role="presentation"><section className="access-dialog provider-dialog" role="dialog" aria-modal="true" aria-labelledby="provider-detail-title"><header><div><span className="access-flow-icon"><Server size={17} /></span><div><h2 id="provider-detail-title">{source.name}</h2><p>{source.vendor} · {providerModeLabel(source.mode)} · {source.protocol}</p></div></div><button type="button" aria-label="关闭" onClick={onClose}><X size={15} /></button></header><div className="access-summary"><div><dt>状态</dt><dd>{providerStatusLabel(source.status)}</dd></div><div><dt>模型</dt><dd>{source.modelCount ? `${source.modelCount} 个可用` : "连接后探测"}</dd></div><div><dt>健康</dt><dd>{source.health}</dd></div><div><dt>凭证</dt><dd>{source.credentialHint ?? "Moyusi 托管"}</dd></div></div><div className="access-status"><ShieldCheck size={14} /><div><strong>{source.mode === "moyusi" ? "使用 Moyusi 余额，不需要额外授权" : "敏感凭证只交给 Desktop 安全存储"}</strong><p>{source.note}。连接后会先检查模型列表和协议能力。</p></div></div><footer><button type="button" onClick={onClose}>稍后</button><button className="button button-primary" type="button" onClick={onConnect}>{source.mode === "moyusi" ? "加入路由" : "继续连接"}<ChevronRight size={13} /></button></footer></section></div>;
+}
+
+function ProviderProfileDialog({ profile, onClose, onSave }: { profile: ProviderProfile; onClose: () => void; onSave: (profile: ProviderProfile) => void }) {
+  const [draft, setDraft] = useState(profile);
+  const models = catalogRepository.list({ modality: "语言" });
+  return (
+    <div className="access-dialog-backdrop" role="presentation">
+      <section className="access-dialog provider-dialog profile-dialog" role="dialog" aria-modal="true" aria-labelledby="profile-dialog-title">
+        <header><div><span className="access-flow-icon"><Settings2 size={17} /></span><div><h2 id="profile-dialog-title">编辑 {profile.tool} 配置</h2><p>Profile 只保存模型选择和来源策略；本机密钥仍由 Desktop 保管。</p></div></div><button type="button" aria-label="关闭" onClick={onClose}><X size={15} /></button></header>
+        <label className="byok-provider-field"><span>模型</span><select value={draft.model} onChange={(event) => setDraft((current) => ({ ...current, model: event.target.value }))}>{models.map((model) => <option key={model.id} value={model.name}>{model.name} · {model.family}</option>)}</select></label>
+        <label className="byok-provider-field"><span>来源</span><select value={draft.sourceId} onChange={(event) => setDraft((current) => ({ ...current, sourceId: event.target.value }))}>{DEMO_PROVIDER_SOURCES.map((source) => <option key={source.id} value={source.id}>{source.name} · {providerModeLabel(source.mode)}</option>)}</select></label>
+        <label className="profile-toggle"><input type="checkbox" checked={draft.enabled} onChange={(event) => setDraft((current) => ({ ...current, enabled: event.target.checked }))} /><span><strong>启用此 Profile</strong><small>启用后，Desktop 会在对应工具中使用这条路由。</small></span></label>
+        <div className="access-status"><ShieldCheck size={14} /><div><strong>安全边界保持不变</strong><p>模型和来源可以同步；API Key、OAuth 会话和系统配置不会写入网页。</p></div></div>
+        <footer><button type="button" onClick={onClose}>取消</button><button className="button button-primary" type="button" onClick={() => onSave({ ...draft, updatedAt: "刚刚" })}>保存配置<Check size={13} /></button></footer>
+      </section>
+    </div>
   );
 }
 
@@ -502,3 +560,20 @@ function desktopStatusLabel(desktop: DesktopConnection): string { return desktop
 function routeStrategyLabel(strategy: RouteStrategy): string { return strategy === "fixed" ? "固定来源" : strategy === "cost" ? "成本优先" : "自动选择"; }
 function routeStrategyDescription(strategy: RouteStrategy): string { return strategy === "fixed" ? "只使用当前来源，故障时暂停并提醒" : strategy === "cost" ? "在可用来源中优先选择成本较低的线路" : "按健康、延迟与价格自动选择并回退"; }
 function migrationOutcomeLabel(outcome: MigrationOutcome): string { return outcome === "exact" ? "原样" : outcome === "adapted" ? "已转换" : outcome === "rebuilt" ? "已重建" : "待确认"; }
+
+function readProviderProfiles(): ProviderProfile[] {
+  try {
+    const saved = window.localStorage.getItem("moyusi-provider-profiles-v1");
+    if (!saved) return [...DEMO_PROVIDER_PROFILES];
+    const parsed: unknown = JSON.parse(saved);
+    if (!Array.isArray(parsed)) return [...DEMO_PROVIDER_PROFILES];
+    const profiles = parsed.filter((item): item is ProviderProfile => {
+      if (!item || typeof item !== "object") return false;
+      const candidate = item as Partial<ProviderProfile>;
+      return typeof candidate.id === "string" && typeof candidate.tool === "string" && typeof candidate.sourceId === "string" && typeof candidate.model === "string" && typeof candidate.enabled === "boolean" && typeof candidate.updatedAt === "string";
+    });
+    return profiles.length ? profiles : [...DEMO_PROVIDER_PROFILES];
+  } catch {
+    return [...DEMO_PROVIDER_PROFILES];
+  }
+}
