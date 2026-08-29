@@ -19,6 +19,7 @@
   --menu-hover: #f2f0ea;
   --menu-selected: #f8e9e6;
   --menu-shadow: 0 14px 36px rgba(36, 31, 24, 0.16);
+  --catalog-controls-shadow: none;
   --radius-sm: 6px;
   --radius-md: 10px;
   --radius-lg: 14px;
@@ -53,4 +54,5 @@
   --menu-hover: #2b2a26;
   --menu-selected: #39201d;
   --menu-shadow: 0 18px 46px rgba(0, 0, 0, 0.56);
+  --catalog-controls-shadow: 0 12px 28px rgba(0, 0, 0, 0.2);
 }

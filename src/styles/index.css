@@ -37,7 +37,7 @@ button { cursor: pointer; }
 .catalog-search:focus-within { border-color: var(--line-strong); }
 .catalog-search input { min-width: 0; flex: 1; border: 0; outline: 0; background: transparent; color: var(--text); font-size: 10px; }
 
-.market-controls { position: sticky; top: 64px; z-index: 25; border: 1px solid var(--line); border-radius: var(--radius-md); background: color-mix(in srgb, var(--bg) 94%, var(--surface)); box-shadow: 0 10px 24px color-mix(in srgb, #000 10%, transparent); backdrop-filter: blur(18px); }
+.market-controls { position: sticky; top: 64px; z-index: 25; border: 1px solid var(--line); border-radius: var(--radius-md); background: color-mix(in srgb, var(--bg) 94%, var(--surface)); box-shadow: var(--catalog-controls-shadow); backdrop-filter: blur(18px); }
 .market-type-row, .market-control-row { min-width: 0; display: flex; align-items: center; }
 .market-type-row { min-height: 46px; padding: 6px 8px; border-bottom: 1px solid var(--line); }
 .market-control-row { min-height: 50px; justify-content: space-between; gap: 18px; padding: 8px 10px; }
