@@ -92,6 +92,8 @@ Desktop
 
 架构先行批次已完成：前端现在通过 `PlatformModelGraph` 消费模型身份、版本、来源、RouteOffer、PriceVersion 与 ProbeWindow 的归一化关系；后续真实 API 只替换 repository adapter，不再让页面直接读取 fixture。
 
+控制面读取投影也已建立：`ControlPlaneSnapshot` 统一连接项目、来源授权、脱敏 Key、Desktop、费用和 Workspace 资产，但不把这些对象合并成可写的大 JSON；后续命令接口仍按领域边界拆分。
+
 ### 主线 C：桌面路由
 
 先支持 Codex 与 Claude Code 两个目标，完成发现、预览 diff、确认、写入、验证和回滚。路由失败只对已声明的超时、429 和可恢复 5xx 执行回退。
