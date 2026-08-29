@@ -27,7 +27,7 @@ import {
 } from "lucide-react";
 import { getAccessFlow, type WorkspaceSection } from "../../domain/accessPolicy";
 import type { CatalogSelection } from "../../domain/catalog";
-import type { ActiveRoute, UsageEvent } from "../../domain/demoPlatform";
+import type { ActiveRoute, RouteStrategy, UsageEvent } from "../../domain/demoPlatform";
 import type { ByokProvider, MigrationOutcome, MigrationTarget } from "../../domain/portableWorkspace";
 import type { DemoPlatformController } from "./useDemoPlatform";
 import { useDemoPortableWorkspace, type DemoPortableWorkspaceController } from "./useDemoPortableWorkspace";
@@ -89,8 +89,8 @@ export function Workspace({
 
       <section className="workspace-content">
         {pendingSelection && <PendingSelection selection={pendingSelection} onActivate={onActivateSelection} onAction={act} />}
-        {section === "overview" && <Overview activeRoute={platform.state.activeRoute} periodCost={platform.billing.periodCostCny} requestCount={platform.billing.requestCount} onNavigate={onNavigate} />}
-        {section === "routing" && <Routing activeRoute={platform.state.activeRoute} previousRoute={platform.state.previousRoute} onBrowseModels={onBrowseModels} onSimulateCall={platform.simulateCall} onRestore={platform.restore} onAction={act} />}
+        {section === "overview" && <Overview activeRoute={platform.state.activeRoute} periodCost={platform.billing.periodCostCny} requestCount={platform.billing.requestCount} routeStrategy={platform.state.routeStrategy} connectedTools={platform.state.connectedTools} onNavigate={onNavigate} />}
+        {section === "routing" && <Routing activeRoute={platform.state.activeRoute} previousRoute={platform.state.previousRoute} routeStrategy={platform.state.routeStrategy} onBrowseModels={onBrowseModels} onSimulateCall={platform.simulateCall} onRestore={platform.restore} onUpdateStrategy={platform.updateRouteStrategy} onAction={act} />}
         {section === "sources" && <Sources workspace={portableWorkspace} onAction={act} />}
         {section === "deployments" && <Deployments onBrowseModels={onBrowseModels} onAction={act} />}
         {section === "environment" && <Environment workspace={portableWorkspace} onAction={act} />}
@@ -144,16 +144,16 @@ function PageHead({ title, description, action }: { kicker: string; title: strin
   );
 }
 
-function Overview({ activeRoute, periodCost, requestCount, onNavigate }: { activeRoute: ActiveRoute; periodCost: number; requestCount: number; onNavigate: (section: WorkspaceSection) => void }) {
+function Overview({ activeRoute, periodCost, requestCount, routeStrategy, connectedTools, onNavigate }: { activeRoute: ActiveRoute; periodCost: number; requestCount: number; routeStrategy: RouteStrategy; connectedTools: string[]; onNavigate: (section: WorkspaceSection) => void }) {
   const activeTool = toolLabel(activeRoute);
   return (
     <>
-      <PageHead kicker="CONTROL PLANE" title="工作台" description="模型切换、AI 配置和费用都在这里。今天有 2 项需要确认。" action={<span className="workspace-ready"><i /> 运行正常</span>} />
+      <PageHead kicker="CONTROL PLANE" title="工作台" description="模型切换、AI 配置和费用都在这里。今天有 2 项需要确认。" action={<span className="workspace-ready"><i /> {routeStrategyLabel(routeStrategy)} · 运行正常</span>} />
       <div className="workspace-stats">
         <Metric label="本期费用" value={`¥ ${periodCost.toFixed(2)}`} note="含本机演示调用" />
         <Metric label="今日请求" value={String(requestCount)} note="含本机演示调用" />
         <Metric label="活动模型" value="4" note="2 闭源 · 2 开放" />
-        <Metric label="已连接工具" value="2" note="Codex · Claude Code" />
+        <Metric label="已连接工具" value={String(connectedTools.length)} note={connectedTools.join(" · ")} />
       </div>
 
       <div className="overview-grid">
@@ -190,7 +190,7 @@ function Overview({ activeRoute, periodCost, requestCount, onNavigate }: { activ
   );
 }
 
-function Routing({ activeRoute, previousRoute, onBrowseModels, onSimulateCall, onRestore, onAction }: { activeRoute: ActiveRoute; previousRoute: ActiveRoute | null; onBrowseModels: () => void; onSimulateCall: () => Promise<UsageEvent>; onRestore: () => void; onAction: (message: string) => void }) {
+function Routing({ activeRoute, previousRoute, routeStrategy, onBrowseModels, onSimulateCall, onRestore, onUpdateStrategy, onAction }: { activeRoute: ActiveRoute; previousRoute: ActiveRoute | null; routeStrategy: RouteStrategy; onBrowseModels: () => void; onSimulateCall: () => Promise<UsageEvent>; onRestore: () => void; onUpdateStrategy: (strategy: RouteStrategy) => void; onAction: (message: string) => void }) {
   const [testing, setTesting] = useState(false);
   const fallbacks = [
     { name: "GPT · Coding", meta: "统一余额 · 稳定来源", health: "99.95%" },
@@ -222,6 +222,10 @@ function Routing({ activeRoute, previousRoute, onBrowseModels, onSimulateCall, o
       <PageHead kicker="ROUTING" title="模型切换" description="选择使用场景和模型来源。切换前会先检查可用性，并保留原配置用于恢复。" action={<button className="button button-primary compact-button" type="button" onClick={onBrowseModels}>从广场选择模型</button>} />
       <Panel>
         <PanelHead eyebrow="PROVIDER PROFILE" title={`${toolLabel(activeRoute)} · 当前模型`} action={<span className="inline-status"><i />正在使用</span>} />
+        <div className="strategy-bar">
+          <div><strong>路由策略</strong><small>{routeStrategyDescription(routeStrategy)}</small></div>
+          <label><span className="visually-hidden">选择路由策略</span><select value={routeStrategy} onChange={(event) => { onUpdateStrategy(event.target.value as RouteStrategy); onAction(`已切换为${routeStrategyLabel(event.target.value as RouteStrategy)}`); }}><option value="auto">自动选择</option><option value="fixed">固定当前来源</option><option value="cost">成本优先</option></select></label>
+        </div>
         <div className="route-order">
           <RouteOrder index="01" name={activeRoute.modelName} meta={`${activeRoute.sourceMode} · ${activeRoute.sourceName}`} health={activeRoute.health} />
           {fallbacks.map((route, index) => <RouteOrder key={route.name} index={`0${index + 2}`} name={route.name} meta={route.meta} health={route.health} />)}
@@ -398,4 +402,6 @@ function MigrationTarget({ name, version, exact, adapted, unsupported, status }:
 function MigrationRow({ name, result, detail, warn = false }: { name: string; result: string; detail: string; warn?: boolean }) { return <div className="migration-row"><strong>{name}</strong><span data-warn={warn}>{result}</span><p>{detail}</p></div>; }
 function UsageRow({ id, model, route, tokens, latency, cost }: { id: string; model: string; route: string; tokens: string; latency: string; cost: string }) { return <div className="usage-row"><code>{id}</code><div><strong>{model}</strong><small>{route}</small></div><code>{tokens}</code><code>{latency}</code><code>{cost}</code></div>; }
 function toolLabel(route: ActiveRoute): string { return route.modality === "语言" ? "Codex" : route.modality === "图片" ? "图像工作流" : "视频工作流"; }
+function routeStrategyLabel(strategy: RouteStrategy): string { return strategy === "fixed" ? "固定来源" : strategy === "cost" ? "成本优先" : "自动选择"; }
+function routeStrategyDescription(strategy: RouteStrategy): string { return strategy === "fixed" ? "只使用当前来源，故障时暂停并提醒" : strategy === "cost" ? "在可用来源中优先选择成本较低的线路" : "按健康、延迟与价格自动选择并回退"; }
 function migrationOutcomeLabel(outcome: MigrationOutcome): string { return outcome === "exact" ? "原样" : outcome === "adapted" ? "已转换" : outcome === "rebuilt" ? "已重建" : "待确认"; }

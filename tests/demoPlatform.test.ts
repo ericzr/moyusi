@@ -4,6 +4,8 @@ import {
   createInitialDemoState,
   recordMockUsage,
   restorePreviousRoute,
+  setRouteStrategy,
+  summarizeWorkspace,
   summarizeBilling,
 } from "../src/domain/demoPlatform";
 import { catalogRepository } from "../src/services/catalogRepository";
@@ -49,5 +51,19 @@ describe("demo platform vertical slice", () => {
     expect(result.event.billingScope).toBe("external");
     expect(summary.availableBalanceCny).toBe(80);
     expect(summary.externalEstimateCny).toBeCloseTo(6.24);
+  });
+
+  it("persists an explicit routing strategy without changing the active route", () => {
+    const initial = createInitialDemoState();
+    const updated = setRouteStrategy(initial, "cost");
+    expect(updated.routeStrategy).toBe("cost");
+    expect(updated.activeRoute).toEqual(initial.activeRoute);
+    expect(setRouteStrategy(updated, "cost")).toBe(updated);
+  });
+
+  it("summarizes the current workbench from platform state", () => {
+    const summary = summarizeWorkspace(createInitialDemoState());
+    expect(summary).toMatchObject({ routeStatus: "ready", activeModel: "GPT · Coding", activeSource: "Moyusi 稳定线路", pendingAttention: 2 });
+    expect(summary.activeTools).toEqual(["Codex", "Claude Code"]);
   });
 });

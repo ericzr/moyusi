@@ -6,6 +6,7 @@ import {
   isDemoPlatformState,
   recordMockUsage,
   restorePreviousRoute,
+  setRouteStrategy,
   summarizeBilling,
   type DemoPlatformState,
   type UsageEvent,
@@ -43,13 +44,17 @@ export function useDemoPlatform() {
     commit(restorePreviousRoute);
   }
 
+  function updateRouteStrategy(strategy: DemoPlatformState["routeStrategy"]): void {
+    commit((current) => setRouteStrategy(current, strategy));
+  }
+
   function commit(update: (current: DemoPlatformState) => DemoPlatformState): void {
     const next = update(stateRef.current);
     stateRef.current = next;
     setState(next);
   }
 
-  return { state, billing, activate, simulateCall, restore };
+  return { state, billing, activate, simulateCall, restore, updateRouteStrategy };
 }
 
 export type DemoPlatformController = ReturnType<typeof useDemoPlatform>;
@@ -59,7 +64,12 @@ function readLocalState(): DemoPlatformState {
     const saved = window.localStorage.getItem(STORAGE_KEY);
     if (!saved) return createInitialDemoState();
     const parsed: unknown = JSON.parse(saved);
-    return isDemoPlatformState(parsed) ? parsed : createInitialDemoState();
+    if (!isDemoPlatformState(parsed)) return createInitialDemoState();
+    return {
+      ...parsed,
+      routeStrategy: parsed.routeStrategy ?? "auto",
+      connectedTools: parsed.connectedTools ?? ["Codex", "Claude Code"],
+    };
   } catch {
     return createInitialDemoState();
   }

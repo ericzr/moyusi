@@ -1,5 +1,7 @@
 import type { CatalogSelection, ModelKind, ModelModality, OfferType } from "./catalog";
 
+export type RouteStrategy = "auto" | "fixed" | "cost";
+
 export type ActiveRoute = {
   modelId: string;
   modelName: string;
@@ -32,6 +34,16 @@ export type DemoPlatformState = {
   activeRoute: ActiveRoute;
   previousRoute: ActiveRoute | null;
   usageEvents: UsageEvent[];
+  routeStrategy: RouteStrategy;
+  connectedTools: string[];
+};
+
+export type WorkspaceSummary = {
+  routeStatus: "ready" | "degraded";
+  activeModel: string;
+  activeSource: string;
+  activeTools: string[];
+  pendingAttention: number;
 };
 
 export type BillingSummary = {
@@ -58,6 +70,22 @@ export function createInitialDemoState(): DemoPlatformState {
     },
     previousRoute: null,
     usageEvents: [],
+    routeStrategy: "auto",
+    connectedTools: ["Codex", "Claude Code"],
+  };
+}
+
+export function setRouteStrategy(state: DemoPlatformState, strategy: RouteStrategy): DemoPlatformState {
+  return state.routeStrategy === strategy ? state : { ...state, routeStrategy: strategy };
+}
+
+export function summarizeWorkspace(state: DemoPlatformState): WorkspaceSummary {
+  return {
+    routeStatus: state.activeRoute.health === "待探测" ? "degraded" : "ready",
+    activeModel: state.activeRoute.modelName,
+    activeSource: state.activeRoute.sourceName,
+    activeTools: state.connectedTools,
+    pendingAttention: state.connectedTools.length ? 2 : 3,
   };
 }
 

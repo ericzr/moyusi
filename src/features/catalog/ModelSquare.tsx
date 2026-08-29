@@ -32,6 +32,7 @@ import {
 } from "../../domain/catalog";
 import { getAccessFlow, sourceActionLabel } from "../../domain/accessPolicy";
 import { catalogRepository } from "../../services/catalogRepository";
+import { listCatalogModels } from "../../services/mockApi";
 
 type Filter = "全部供给" | ModelKind;
 type ViewMode = "compact" | "cards";
@@ -99,8 +100,7 @@ export function ModelSquare({ onOpenDetail }: { onOpenDetail: (modelId: string) 
   const [showPrecision, setShowPrecision] = useState(false);
   const [precision, setPrecision] = useState<PrecisionFilters>({ tags: [], offerTypes: [], regions: [] });
   const [sort, setSort] = useState<CatalogSort>("recommended");
-  const offers = useMemo(() => {
-    return catalogRepository.list({
+  const catalogFilter = useMemo(() => ({
       modality,
       kind: filter === "全部供给" ? undefined : filter,
       query,
@@ -111,8 +111,23 @@ export function ModelSquare({ onOpenDetail }: { onOpenDetail: (modelId: string) 
       minContextWindow: precision.minContextWindow,
       protocol: precision.protocol,
       sort,
+  }), [filter, modality, precision, query, sort]);
+  const [offers, setOffers] = useState<ModelOffer[]>(() => catalogRepository.list(catalogFilter));
+  const [catalogState, setCatalogState] = useState<"ready" | "loading" | "error">("ready");
+
+  useEffect(() => {
+    let cancelled = false;
+    setCatalogState("loading");
+    listCatalogModels(catalogFilter).then((response) => {
+      if (cancelled) return;
+      setOffers(response.data);
+      setCatalogState("ready");
+    }).catch(() => {
+      if (cancelled) return;
+      setCatalogState("error");
     });
-  }, [filter, modality, precision, query, sort]);
+    return () => { cancelled = true; };
+  }, [catalogFilter]);
 
   const sourceCount = offers.reduce((total, offer) => total + offer.sources.length, 0);
 
@@ -198,7 +213,7 @@ export function ModelSquare({ onOpenDetail }: { onOpenDetail: (modelId: string) 
       )}
 
       <section className="catalog-section">
-        <div className="catalog-meta"><span>{offers.length} 个模型 · {sourceCount} 个可切换来源</span><span>价格、延迟与状态为演示数据</span></div>
+        <div className="catalog-meta"><span>{offers.length} 个模型 · {sourceCount} 个可切换来源</span><span>{catalogState === "loading" ? "正在更新目录…" : catalogState === "error" ? "目录更新失败，显示上次结果" : "价格、延迟与状态为演示数据"}</span></div>
         <div className="catalog-layout">
           {view === "compact" && <CompactResults offers={offers} onOpenDetail={(offer) => onOpenDetail(offer.id)} />}
           {view === "cards" && <CardResults offers={offers} onOpenDetail={(offer) => onOpenDetail(offer.id)} />}

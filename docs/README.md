@@ -19,6 +19,7 @@
 13. [11-development-mainline.md](./11-development-mainline.md)：冻结后的产品/系统架构、供给经营策略、五条开发主线和阶段退出标准。
 14. [12-stage2-vertical-slice.md](./12-stage2-vertical-slice.md)：模型来源选择、一键切换、可恢复路由、模拟调用与费用记录的首条纵向闭环。
 15. [13-web-desktop-boundary.md](./13-web-desktop-boundary.md)：CC Switch 能力拆解、网页与桌面端边界及轻量桥接决策。
+16. [14-stage2-route-control.md](./14-stage2-route-control.md)：typed mock API、目录状态与路由策略控制的 Stage 2 增量。
 
 ## 当前冻结的产品决策
 
