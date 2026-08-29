@@ -85,6 +85,7 @@ function WorkspaceRoute({ platform }: { platform: DemoPlatformController }) {
   const navigate = useNavigate();
 
   if (!isWorkspaceSection(section)) return <Navigate to="/workspace/overview" replace />;
+  if (section === "account") return <Navigate to="/workspace/settings" replace />;
 
   const query = new URLSearchParams(location.search);
   const pendingSelection = catalogRepository.resolveSelection(query.get("model"), query.get("source"));

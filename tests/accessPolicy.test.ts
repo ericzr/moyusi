@@ -19,6 +19,10 @@ describe("access policy", () => {
 
   it("rejects unknown workbench routes", () => {
     expect(isWorkspaceSection("billing")).toBe(true);
+    expect(isWorkspaceSection("tools")).toBe(true);
+    expect(isWorkspaceSection("sessions")).toBe(true);
+    expect(isWorkspaceSection("usage")).toBe(true);
+    expect(isWorkspaceSection("settings")).toBe(true);
     expect(isWorkspaceSection("admin")).toBe(false);
   });
 });

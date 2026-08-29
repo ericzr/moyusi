@@ -8,11 +8,13 @@ import {
   Check,
   ChevronRight,
   CircleUserRound,
+  ChartNoAxesCombined,
   CloudCog,
   Code2,
   Database,
   KeyRound,
   Network,
+  MessageSquare,
   PlugZap,
   ReceiptText,
   Server,
@@ -34,14 +36,27 @@ import { useDemoPortableWorkspace, type DemoPortableWorkspaceController } from "
 import { useWorkspaceSummary } from "./useWorkspaceSummary";
 import "./workspace.css";
 
-const NAV: { id: WorkspaceSection; label: string; icon: LucideIcon }[] = [
-  { id: "overview", label: "总览", icon: Activity },
-  { id: "routing", label: "模型切换", icon: Network },
-  { id: "sources", label: "模型来源", icon: KeyRound },
-  { id: "deployments", label: "我的模型", icon: CloudCog },
-  { id: "environment", label: "AI 配置与迁移", icon: Sparkles },
-  { id: "billing", label: "费用", icon: ReceiptText },
-  { id: "account", label: "账户", icon: CircleUserRound },
+const NAV_GROUPS: { label: string; items: { id: WorkspaceSection; label: string; icon: LucideIcon; count?: string }[] }[] = [
+  { label: "开始", items: [
+    { id: "overview", label: "总览", icon: Activity },
+    { id: "routing", label: "模型切换", icon: Network },
+  ] },
+  { label: "接入", items: [
+    { id: "sources", label: "来源与凭证", icon: KeyRound },
+    { id: "deployments", label: "模型与部署", icon: CloudCog },
+    { id: "tools", label: "工具与设备", icon: SquareTerminal },
+  ] },
+  { label: "工作环境", items: [
+    { id: "environment", label: "配置与迁移", icon: Sparkles, count: "2" },
+    { id: "sessions", label: "会话", icon: MessageSquare },
+  ] },
+  { label: "费用", items: [
+    { id: "usage", label: "用量与请求", icon: ChartNoAxesCombined },
+    { id: "billing", label: "余额与账单", icon: ReceiptText },
+  ] },
+  { label: "设置", items: [
+    { id: "settings", label: "账户与偏好", icon: CircleUserRound },
+  ] },
 ];
 
 export function Workspace({
@@ -77,12 +92,17 @@ export function Workspace({
           <strong>个人空间</strong>
         </div>
         <nav aria-label="工作台子导航">
-          {NAV.map(({ id, label, icon: Icon }) => (
-            <button key={id} type="button" data-active={section === id} onClick={() => onNavigate(id)}>
-              <Icon size={15} />
-              <span>{label}</span>
-              {id === "environment" && <small>2</small>}
-            </button>
+          {NAV_GROUPS.map((group) => (
+            <div className="workspace-nav-group" key={group.label}>
+              <span className="workspace-nav-heading">{group.label}</span>
+              {group.items.map(({ id, label, icon: Icon, count }) => (
+                <button key={id} type="button" data-active={section === id} onClick={() => onNavigate(id)}>
+                  <Icon size={15} />
+                  <span>{label}</span>
+                  {count && <small>{count}</small>}
+                </button>
+              ))}
+            </div>
           ))}
         </nav>
         <div className="sidebar-foot">
@@ -97,9 +117,12 @@ export function Workspace({
         {section === "routing" && <Routing activeRoute={platform.state.activeRoute} previousRoute={platform.state.previousRoute} routePolicy={platform.state.routePolicy} desktop={desktop} onBrowseModels={onBrowseModels} onSimulateCall={platform.simulateCall} onRestore={platform.restore} onUpdatePolicy={platform.updateRoutePolicy} onAction={act} />}
         {section === "sources" && <Sources workspace={portableWorkspace} onAction={act} />}
         {section === "deployments" && <Deployments onBrowseModels={onBrowseModels} onAction={act} />}
+        {section === "tools" && <Tools desktop={desktop} connectedTools={summary?.activeTools ?? platform.state.connectedTools} onAction={act} />}
         {section === "environment" && <Environment workspace={portableWorkspace} onAction={act} />}
+        {section === "sessions" && <Sessions onAction={act} />}
+        {section === "usage" && <Usage events={platform.state.usageEvents} billing={platform.billing} onAction={act} />}
         {section === "billing" && <Billing events={platform.state.usageEvents} billing={platform.billing} onAction={act} />}
-        {section === "account" && <Account onAction={act} />}
+        {section === "settings" && <Account onAction={act} />}
       </section>
 
       {notice && <div className="workspace-toast" role="status"><Check size={14} />{notice}</div>}
@@ -384,14 +407,64 @@ function Environment({ workspace, onAction }: { workspace: DemoPortableWorkspace
   );
 }
 
+function Tools({ desktop, connectedTools, onAction }: { desktop: DesktopConnection; connectedTools: string[]; onAction: (message: string) => void }) {
+  const apps = [
+    { name: "Codex", version: "0.150.1", state: "已安装 · 可运行", action: "打开" },
+    { name: "Claude Code", version: "2.1.251", state: "已安装 · 可升级", action: "检查更新" },
+    { name: "Gemini CLI", version: "—", state: "未安装", action: "安装" },
+    { name: "OpenCode", version: "1.18.25", state: "已安装 · 环境待检查", action: "检查环境" },
+  ];
+  return (
+    <>
+      <PageHead kicker="TOOLS & DEVICES" title="工具与设备" description="查看本机 AI 工具、Desktop Bridge 和路由服务状态。安装、升级与配置写入由 Desktop 执行。" action={<button className="button button-primary compact-button" type="button" onClick={() => onAction("正在请求 Desktop 重新扫描本机工具")}>重新扫描</button>} />
+      <DesktopBridge desktop={desktop} />
+      <div className="two-column-panels">
+        <Panel><PanelHead eyebrow="CONNECTED TOOLS" title={`${connectedTools.length} 个工具已连接`} />{connectedTools.map((tool) => <SourceRow key={tool} name={tool} meta="Moyusi Desktop · 路由已同步" status="已连接" />)}<button className="source-add" type="button" onClick={() => onAction("连接码已生成，请在目标设备打开 Moyusi Desktop")}>连接新设备 <ChevronRight size={13} /></button></Panel>
+        <Panel><PanelHead eyebrow="LOCAL RUNTIME" title="本地路由服务" /><SettingRow label="Desktop 版本" value={desktop.version ?? "未检测"} /><SettingRow label="本地路由" value={desktop.localRouter === "ready" ? "运行中 · loopback" : "未启动"} /><SettingRow label="配置保护" value="自动备份 · 可回滚" /><div className="panel-footer"><span>不会向网页上传第三方密钥</span><button type="button" onClick={() => onAction("本地路由启动请求已发送")}>{desktop.localRouter === "ready" ? "查看日志" : "启动路由"}</button></div></Panel>
+      </div>
+      <Panel><PanelHead eyebrow="APPLICATION DISCOVERY" title="应用检测" action={<span>最近检查：刚刚</span>} /><div className="app-discovery-list">{apps.map((app) => <div className="app-discovery-row" key={app.name}><span className="app-discovery-icon"><SquareTerminal size={15} /></span><div><strong>{app.name}</strong><small>{app.version} · {app.state}</small></div><span className="app-discovery-state" data-state={app.state === "未安装" ? "muted" : app.state.includes("升级") ? "warn" : "ok"}>{app.state}</span><button type="button" onClick={() => onAction(`${app.name}：${app.action}操作已加入 Desktop 队列`)}>{app.action}</button></div>)}</div></Panel>
+    </>
+  );
+}
+
+function Sessions({ onAction }: { onAction: (message: string) => void }) {
+  const sessions = [
+    { title: "Moyusi 工作台主线开发", tool: "Codex", model: "GPT · Coding", time: "刚刚", state: "可恢复" },
+    { title: "调研 CC Switch 模型平台竞品", tool: "Claude Code", model: "Claude Sonnet", time: "52 分钟前", state: "可恢复" },
+    { title: "设计算力与数据市场架构", tool: "Codex", model: "Qwen Coder", time: "12 小时前", state: "需转换" },
+  ];
+  return (
+    <>
+      <PageHead kicker="SESSION INDEX" title="会话" description="统一索引不同工具中的会话。先恢复可验证的检查点，不承诺厂商隐藏运行时的无损迁移。" action={<button className="button button-quiet compact-button" type="button" onClick={() => onAction("正在请求 Desktop 同步会话索引")}>同步索引</button>} />
+      <Panel><div className="session-toolbar"><strong>{sessions.length} 个会话</strong><div><select aria-label="筛选工具"><option>全部工具</option><option>Codex</option><option>Claude Code</option></select><select aria-label="筛选状态"><option>全部状态</option><option>可恢复</option><option>需转换</option></select></div></div><div className="session-list">{sessions.map((session) => <article className="session-row" key={session.title}><span className="session-icon"><MessageSquare size={15} /></span><div><strong>{session.title}</strong><small>{session.tool} · {session.model} · {session.time}</small></div><span className="session-state" data-state={session.state === "可恢复" ? "ok" : "warn"}>{session.state}</span><button type="button" onClick={() => onAction(`${session.title} 的恢复预览已打开`)}>查看</button></article>)}</div></Panel>
+      <div className="security-note"><ShieldCheck size={17} /><div><strong>会话正文默认留在本机</strong><p>网页只同步索引、恢复标识和迁移结果；加密正文、隐藏推理状态和不可兼容内容会明确标记为不支持。</p></div></div>
+    </>
+  );
+}
+
+function Usage({ events, billing, onAction }: { events: UsageEvent[]; billing: DemoPlatformController["billing"]; onAction: (message: string) => void }) {
+  const rows = events.length ? events : [
+    { id: "req_8FK2", modelName: "GPT · Coding", sourceName: "Moyusi 稳定线路", sourceMode: "统一余额", usage: "18.4K", latency: "2.7s", costLabel: "¥ 0.18" },
+    { id: "req_7QD9", modelName: "Qwen Coder", sourceName: "共享算力", sourceMode: "共享算力", usage: "32.1K", latency: "3.1s", costLabel: "¥ 0.07" },
+    { id: "req_6MV4", modelName: "Gemini Flash", sourceName: "Google AI", sourceMode: "BYOK", usage: "9.2K", latency: "1.8s", costLabel: "估算 ¥ 0.04" },
+  ];
+  return (
+    <>
+      <PageHead kicker="USAGE & REQUESTS" title="用量与请求" description="查看 Token、延迟、状态、实际来源和回退原因。请求日志是调用证据，账本流水请前往余额与账单。" action={<button className="button button-quiet compact-button" type="button" onClick={() => onAction("用量报表导出已准备")}>导出报表</button>} />
+      <div className="workspace-stats"><Metric label="今日请求" value={String(billing.requestCount)} note="含本机演示调用" /><Metric label="本期 Token" value="1.31M" note="输入 1.12M · 输出 0.19M" /><Metric label="平均响应" value="2.3s" note="最近 24 小时" /><Metric label="缓存命中" value="74.1%" note="仅统计支持的来源" /></div>
+      <Panel><PanelHead eyebrow="REQUEST LOG" title="最近请求" action={<span>默认不保存正文</span>} /><div className="usage-row usage-row-head"><span>请求</span><span>模型 / 来源</span><span>用量</span><span>响应</span><span>费用</span></div>{rows.map((event) => <UsageRow key={event.id} id={event.id} model={event.modelName} route={`${event.sourceName} · ${event.sourceMode}`} tokens={event.usage} latency={event.latency} cost={event.costLabel} />)}</Panel>
+    </>
+  );
+}
+
 function Billing({ events, billing, onAction }: { events: UsageEvent[]; billing: DemoPlatformController["billing"]; onAction: (message: string) => void }) {
   const bars = [24, 38, 31, 52, 45, 67, 58, 76, 62, 88, 71, 82, 64, 91];
   return (
     <>
-      <PageHead kicker="USAGE & BILLING" title="费用" description="Moyusi 余额和其他平台直接收取的费用分开显示，每笔费用都能查到模型与来源。" action={<button className="button button-primary compact-button" type="button" onClick={() => onAction("充值流程仅作预览，未发起真实支付")}>充值</button>} />
+      <PageHead kicker="BALANCE & LEDGER" title="余额与账单" description="Moyusi 余额、充值、扣费和退款单独记账；BYOK 费用只显示外部估算，不会从 Moyusi 余额扣除。" action={<button className="button button-primary compact-button" type="button" onClick={() => onAction("充值流程仅作预览，未发起真实支付")}>充值</button>} />
       <div className="workspace-stats"><Metric label="可用余额" value={`¥ ${billing.availableBalanceCny.toFixed(2)}`} note="统一余额" /><Metric label="本期费用" value={`¥ ${billing.periodCostCny.toFixed(2)}`} note="含本机演示调用" /><Metric label="外部估算" value={`¥ ${billing.externalEstimateCny.toFixed(2)}`} note="BYOK 不代扣" /><Metric label="今日请求" value={String(billing.requestCount)} note="含本机演示调用" /></div>
       <Panel className="usage-panel"><PanelHead eyebrow="14 DAYS" title="每日费用" action={<strong>¥ {billing.periodCostCny.toFixed(2)}</strong>} /><div className="usage-bars">{bars.map((height, index) => <span key={index} style={{ height: `${height}%` }} title={`第 ${index + 1} 天`} />)}</div></Panel>
-      <Panel><PanelHead eyebrow="RECENT REQUESTS" title={events.length ? "最近请求 · 本机演示" : "最近请求"} /><div className="usage-row usage-row-head"><span>请求</span><span>模型 / 来源</span><span>用量</span><span>响应 / 排队</span><span>费用</span></div>{events.map((event) => <UsageRow key={event.id} id={event.id} model={event.modelName} route={`${event.sourceName} · ${event.sourceMode}`} tokens={event.usage} latency={event.latency} cost={event.costLabel} />)}<UsageRow id="req_8FK2" model="GPT · Coding" route="稳定 · 统一余额" tokens="18.4K" latency="2.7s" cost="¥ 0.18" /><UsageRow id="req_7QD9" model="Qwen Coder" route="共享算力 · FP8" tokens="32.1K" latency="3.1s" cost="¥ 0.07" /><UsageRow id="req_6MV4" model="Gemini Flash" route="BYOK · 外部" tokens="9.2K" latency="1.8s" cost="估算 ¥ 0.04" /></Panel>
+      <Panel><PanelHead eyebrow="LEDGER" title="最近账本流水" action={<span>不可变记录</span>} /><div className="ledger-row ledger-row-head"><span>时间</span><span>类型</span><span>说明</span><span>金额</span><span>余额</span></div><LedgerRow time="今天 13:17" type="usage_debit" description="GPT · Coding · Moyusi 稳定线路" amount="- ¥ 0.18" balance={`¥ ${billing.availableBalanceCny.toFixed(2)}`} /><LedgerRow time="今天 12:42" type="topup" description="统一余额充值" amount="+ ¥ 20.00" balance="¥ 80.18" /><LedgerRow time="昨天 18:20" type="usage_debit" description="Qwen Coder · 共享算力" amount="- ¥ 0.07" balance="¥ 60.18" /></Panel>
     </>
   );
 }
@@ -423,6 +496,7 @@ function AssetRow({ icon: Icon, name, value, note }: { icon: LucideIcon; name: s
 function MigrationTarget({ name, version, exact, adapted, unsupported, status }: { name: string; version: string; exact: string; adapted: string; unsupported: string; status: string }) { return <div className="migration-target"><div><strong>{name}</strong><small>{version}</small></div><dl><div><dt>原样</dt><dd>{exact}</dd></div><div><dt>转换</dt><dd>{adapted}</dd></div><div><dt>不支持</dt><dd>{unsupported}</dd></div></dl><span>{status}</span></div>; }
 function MigrationRow({ name, result, detail, warn = false }: { name: string; result: string; detail: string; warn?: boolean }) { return <div className="migration-row"><strong>{name}</strong><span data-warn={warn}>{result}</span><p>{detail}</p></div>; }
 function UsageRow({ id, model, route, tokens, latency, cost }: { id: string; model: string; route: string; tokens: string; latency: string; cost: string }) { return <div className="usage-row"><code>{id}</code><div><strong>{model}</strong><small>{route}</small></div><code>{tokens}</code><code>{latency}</code><code>{cost}</code></div>; }
+function LedgerRow({ time, type, description, amount, balance }: { time: string; type: string; description: string; amount: string; balance: string }) { return <div className="ledger-row"><span>{time}</span><code>{type}</code><div>{description}</div><strong data-negative={amount.startsWith("-")}>{amount}</strong><code>{balance}</code></div>; }
 function toolLabel(route: ActiveRoute): string { return route.modality === "语言" ? "Codex" : route.modality === "图片" ? "图像工作流" : "视频工作流"; }
 function desktopStatusLabel(desktop: DesktopConnection): string { return desktop.status === "connected" && desktop.localRouter === "ready" ? "本机已连接" : desktop.status === "not-installed" ? "未安装 Desktop" : "Desktop 离线"; }
 function routeStrategyLabel(strategy: RouteStrategy): string { return strategy === "fixed" ? "固定来源" : strategy === "cost" ? "成本优先" : "自动选择"; }

@@ -5,8 +5,13 @@ export type WorkspaceSection =
   | "routing"
   | "sources"
   | "deployments"
+  | "tools"
   | "environment"
+  | "sessions"
+  | "usage"
   | "billing"
+  | "settings"
+  /** @deprecated Kept so previously shared links remain valid. */
   | "account";
 
 export type AccessFlow = {
@@ -24,8 +29,12 @@ export const WORKSPACE_SECTIONS: readonly WorkspaceSection[] = [
   "routing",
   "sources",
   "deployments",
+  "tools",
   "environment",
+  "sessions",
+  "usage",
   "billing",
+  "settings",
   "account",
 ];
 
