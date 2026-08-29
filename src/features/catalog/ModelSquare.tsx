@@ -26,6 +26,7 @@ import {
   type ModelOffer,
   type ModelRegion,
   type CatalogSelection,
+  type CatalogBilling,
   type CatalogSort,
   type OfferType,
   type SupplyOption,
@@ -46,6 +47,7 @@ type PrecisionFilters = {
   minContextWindow?: number;
   protocol?: ModelProtocol;
 };
+type BillingFilter = CatalogBilling | "全部定价";
 
 const MODALITIES: Array<{ id: ModelModality; title: string; Icon: typeof MessageSquareText }> = [
   { id: "语言", title: "语言", Icon: MessageSquareText },
@@ -67,6 +69,7 @@ const FEATURE_FILTERS: Record<ModelModality, string[]> = {
 const ACCESS_FILTERS: OfferType[] = ["统一余额", "BYOK", "共享算力", "专属算力", "自有端点"];
 const REGION_FILTERS: ModelRegion[] = ["中国", "亚太", "全球"];
 const PROTOCOL_FILTERS: ModelProtocol[] = ["OpenAI", "Anthropic", "Google"];
+const BILLING_FILTERS: CatalogBilling[] = ["按量计费", "按请求"];
 
 const LATENCY_FILTERS = [
   { value: undefined, label: "不限" },
@@ -101,6 +104,9 @@ export function ModelSquare({ onOpenDetail }: { onOpenDetail: (modelId: string) 
   const [showPrecision, setShowPrecision] = useState(false);
   const [precision, setPrecision] = useState<PrecisionFilters>({ tags: [], offerTypes: [], regions: [] });
   const [sort, setSort] = useState<CatalogSort>("recommended");
+  const [provider, setProvider] = useState("全部供应商");
+  const [billing, setBilling] = useState<BillingFilter>("全部定价");
+  const providers = useMemo(() => ["全部供应商", ...new Set(catalogRepository.list({ modality }).map((offer) => offer.family))], [modality]);
   const catalogFilter = useMemo(() => ({
       modality,
       kind: filter === "全部供给" ? undefined : filter,
@@ -111,8 +117,10 @@ export function ModelSquare({ onOpenDetail }: { onOpenDetail: (modelId: string) 
       maxLatencySeconds: precision.maxLatencySeconds,
       minContextWindow: precision.minContextWindow,
       protocol: precision.protocol,
+      providers: provider === "全部供应商" ? undefined : [provider],
+      billingTypes: billing === "全部定价" ? undefined : [billing],
       sort,
-  }), [filter, modality, precision, query, sort]);
+  }), [billing, filter, modality, precision, provider, query, sort]);
   const catalogResource = useCatalogModels(catalogFilter);
   const offers = catalogResource.data ?? [];
   const catalogState = catalogResource.status;
@@ -124,6 +132,8 @@ export function ModelSquare({ onOpenDetail }: { onOpenDetail: (modelId: string) 
     setFilter("全部供给");
     setQuery("");
     setPrecision({ tags: [], offerTypes: [], regions: [] });
+    setProvider("全部供应商");
+    setBilling("全部定价");
   };
 
   const precisionCount = precision.tags.length
@@ -157,6 +167,20 @@ export function ModelSquare({ onOpenDetail }: { onOpenDetail: (modelId: string) 
           <span>供给类型</span>
           <select aria-label="按开放性筛选模型" value={filter} onChange={(event) => setFilter(event.target.value as Filter)}>
             {(["全部供给", "闭源 API", "开放权重"] as Filter[]).map((item) => <option key={item} value={item}>{item}</option>)}
+          </select>
+        </label>
+        <div className="control-divider" />
+        <label className="kind-select provider-select">
+          <span>供应商</span>
+          <select aria-label="按供应商筛选模型" value={provider} onChange={(event) => setProvider(event.target.value)}>
+            {providers.map((item) => <option key={item} value={item}>{item}</option>)}
+          </select>
+        </label>
+        <label className="kind-select billing-select">
+          <span>定价</span>
+          <select aria-label="按定价方式筛选模型" value={billing} onChange={(event) => setBilling(event.target.value as BillingFilter)}>
+            <option value="全部定价">全部定价</option>
+            {BILLING_FILTERS.map((item) => <option key={item} value={item}>{item}</option>)}
           </select>
         </label>
         <div className="control-divider" />
@@ -201,7 +225,7 @@ export function ModelSquare({ onOpenDetail }: { onOpenDetail: (modelId: string) 
       )}
 
       <section className="catalog-section">
-        <div className="catalog-meta"><span>{offers.length} 个模型 · {sourceCount} 个可切换来源</span><span>{catalogState === "loading" ? "正在更新目录…" : catalogState === "error" ? "目录更新失败，显示上次结果" : "价格、延迟与状态为演示数据"}</span></div>
+        <div className="catalog-meta"><span>{offers.length} 个模型 · {sourceCount} 个可切换来源</span><span>{catalogState === "loading" ? "正在更新目录…" : catalogState === "error" ? "目录更新失败，显示上次结果" : "输入 / 输出价格、延迟与成功率均来自最近一次探测"}</span></div>
         <div className="catalog-layout">
           {view === "compact" && <CompactResults offers={offers} onOpenDetail={(offer) => onOpenDetail(offer.id)} onReset={resetPrecision} />}
           {view === "cards" && <CardResults offers={offers} onOpenDetail={(offer) => onOpenDetail(offer.id)} onReset={resetPrecision} />}
@@ -266,19 +290,19 @@ export function ModelDetailPage({
 function CompactResults({ offers, onOpenDetail, onReset }: { offers: ModelOffer[]; onOpenDetail: (offer: ModelOffer) => void; onReset: () => void }) {
   return (
     <div className="catalog-results">
-      <div className="result-header" aria-hidden="true"><span>模型</span><span>适合</span><span>来源</span><span>起始价格</span><span>响应 / 排队</span><span>稳定性</span><span>操作</span></div>
+      <div className="result-header" aria-hidden="true"><span>模型</span><span>适合</span><span>可选来源</span><span>价格</span><span>性能</span><span>状态</span><span>操作</span></div>
       <div className="offer-list">
         {offers.map((offer) => (
           <article className="offer-row" key={offer.id}>
             <span className="model-identity">
               <span className="model-glyph" aria-hidden="true">{offer.kind === "开放权重" ? <Cpu size={15} /> : <Code2 size={15} />}</span>
-              <span><span className="model-title-line"><strong>{offer.name}</strong><small>{offer.family}</small></span><span className="model-summary">{offer.summary}</span></span>
+              <span><span className="model-title-line"><strong>{offer.name}</strong><small>{offer.family}</small></span><code className="model-id">{offer.modelId}</code><span className="model-summary">{offer.summary}</span></span>
             </span>
             <span className="offer-use">{offer.tags.slice(0, 2).map((tag) => <small key={tag}>{tag}</small>)}</span>
             <span className="offer-fact"><small>{offer.sources[0]?.recommended ? "主来源" : "可切换来源"}</small><strong>{offer.sources.length} 个来源</strong><em>{offer.sources[0]?.mode ?? offer.offerType}</em></span>
-            <span className="offer-price"><strong>{offer.price}</strong><small>{offer.unit}</small></span>
-            <span className="offer-latency"><strong>{offer.latency}</strong><small>推荐来源 · 演示</small></span>
-            <span className="offer-health"><strong><i />{offer.health}</strong><small>24h 窗口</small></span>
+            <span className="offer-price"><strong>{pricePrimary(offer)}</strong><small>{priceSecondary(offer)}</small></span>
+            <span className="offer-latency"><strong>{offer.performance?.latency ?? offer.latency}</strong><small>{offer.performance?.throughput ?? "吞吐待测"}</small></span>
+            <span className="offer-health"><strong><i />{offer.performance?.successRate ?? offer.health}</strong><small>{offer.performance?.checkedAt ?? "24h 窗口"}</small></span>
             <button className="row-action" type="button" onClick={() => onOpenDetail(offer)}>查看<ChevronRight size={12} /></button>
           </article>
         ))}
@@ -295,18 +319,29 @@ function CardResults({ offers, onOpenDetail, onReset }: { offers: ModelOffer[]; 
       {offers.map((offer) => (
         <article className="model-card" key={offer.id}>
           <span className="model-card-head"><span><strong>{offer.name}</strong><small>{offer.family}</small></span><em>{offer.kind}</em></span>
+          <code className="model-card-id">{offer.modelId}</code>
           <span className="model-card-summary">{offer.summary}</span>
           <span className="model-card-facts">
-            <span><small>起始价格</small><strong>{offer.price}</strong></span>
-            <span><small>响应 / 排队</small><strong>{offer.latency}</strong></span>
-            <span><small>状态</small><strong className="card-health"><i />{offer.health}</strong></span>
-            <span><small>供给来源</small><strong>{offer.sources.length} 个 · {offer.sources[0]?.mode ?? offer.offerType}</strong></span>
+            <span><small>{offer.pricing?.input ? "输入 / 输出" : "单元价格"}</small><strong>{pricePrimary(offer)} · {priceSecondary(offer)}</strong></span>
+            <span><small>响应 / 吞吐</small><strong>{offer.performance?.latency ?? offer.latency} · {offer.performance?.throughput ?? "—"}</strong></span>
+            <span><small>最近成功率</small><strong className="card-health"><i />{offer.performance?.successRate ?? offer.health}</strong></span>
+            <span><small>来源 / 接口</small><strong>{offer.sources.length} 个 · {offer.protocol}</strong></span>
           </span>
           <span className="model-card-footer"><small>{offer.sources[0] ? `${offer.sources[0].recommended ? "主来源" : "来源"} · ${offer.sources[0].name}` : offer.protocol}</small><button type="button" onClick={() => onOpenDetail(offer)}>查看详情<ChevronRight size={12} /></button></span>
         </article>
       ))}
     </div>
   );
+}
+
+function pricePrimary(offer: ModelOffer): string {
+  return offer.pricing?.input ?? offer.pricing?.output ?? offer.price;
+}
+
+function priceSecondary(offer: ModelOffer): string {
+  if (offer.pricing?.input && offer.pricing.output) return `输出 ${offer.pricing.output}${offer.pricing.unit}`;
+  if (offer.pricing?.output) return `${offer.pricing.unit} · ${offer.pricing.billing}`;
+  return offer.unit;
 }
 
 function ModelDetail({ offer, onBack, onChooseSource }: { offer: ModelOffer; onBack: () => void; onChooseSource: (source: SupplyOption) => void }) {
@@ -323,9 +358,16 @@ function ModelDetail({ offer, onBack, onChooseSource }: { offer: ModelOffer; onB
 
       <section className="detail-facts" aria-label="模型核心信息">
         <div><span>适合</span><strong>{offer.tags.slice(0, 2).join("、")}</strong></div>
-        <div><span>推荐来源响应 / 排队</span><strong>{offer.latency}</strong><small>演示窗口</small></div>
-        <div><span>起始价格</span><strong>{offer.price}</strong><small>{offer.unit}</small></div>
-        <div><span>24h 状态</span><strong className="detail-health"><i />{offer.health}</strong><small>演示监测窗口</small></div>
+        <div><span>{offer.pricing?.input ? "输入 / 输出" : "单元价格"}</span><strong>{pricePrimary(offer)}</strong><small>{priceSecondary(offer)}</small></div>
+        <div><span>响应 / 吞吐</span><strong>{offer.performance?.latency ?? offer.latency}</strong><small>{offer.performance?.throughput ?? "吞吐待测"}</small></div>
+        <div><span>最近成功率</span><strong className="detail-health"><i />{offer.performance?.successRate ?? offer.health}</strong><small>{offer.performance?.checkedAt ?? "演示监测窗口"}</small></div>
+      </section>
+
+      <section className="detail-evidence" aria-label="模型能力与接入信息">
+        <div><span>接口</span><strong>{offer.protocol}</strong></div>
+        <div><span>{offer.specLabel}</span><strong>{offer.specValue}</strong></div>
+        <div><span>定价方式</span><strong>{offer.pricing?.billing ?? "按量计费"}</strong></div>
+        <div><span>可用能力</span><strong>{offer.tags.slice(0, 4).join(" · ")}</strong></div>
       </section>
 
       <section className="detail-sources">

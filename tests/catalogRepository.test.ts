@@ -46,6 +46,14 @@ describe("catalog repository", () => {
     expect(results.every((offer) => offer.sources.some((source) => source.mode === "统一余额"))).toBe(true);
   });
 
+  it("filters by provider and billing shape while keeping catalog evidence attached", () => {
+    const results = catalogRepository.list({ providers: ["Anthropic"], billingTypes: ["按量计费"] });
+
+    expect(results.map((offer) => offer.id)).toEqual(["claude-sonnet"]);
+    expect(results[0]?.pricing?.input).toBe("¥ 12.00");
+    expect(results[0]?.performance?.successRate).toBe("99.92%");
+  });
+
   it("sorts by normalized measurements without mutating its input", () => {
     const languageOffers = catalogRepository.list({ modality: "语言" });
     const priceSorted = filterCatalog(languageOffers, { sort: "price" });

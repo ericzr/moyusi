@@ -1,4 +1,4 @@
-import type { ModelOffer } from "../../domain/catalog";
+import type { CatalogBilling, ModelOffer } from "../../domain/catalog";
 
 // DEMO FIXTURE ONLY. Production components must read through catalogRepository.
 
@@ -378,3 +378,36 @@ export const MODEL_OFFERS: ModelOffer[] = [
     ],
   },
 ];
+
+/**
+ * Demo-only evidence fields model the signals a production catalog should
+ * receive from its route probes and price versions. They are intentionally
+ * kept separate from the human-readable starting price above.
+ */
+const MODEL_EVIDENCE: Record<string, { billing: CatalogBilling; input?: string; output?: string; cache?: string; unit: string; throughput?: string; successRate?: string; checkedAt: string }> = {
+  "claude-sonnet": { billing: "按量计费", input: "¥ 12.00", output: "¥ 60.00", cache: "¥ 3.00", unit: "/ 1M", throughput: "61.1 t/s", successRate: "99.92%", checkedAt: "6 分钟前" },
+  "gpt-coding": { billing: "按量计费", input: "¥ 8.20", output: "¥ 32.80", cache: "¥ 2.46", unit: "/ 1M", throughput: "74.8 t/s", successRate: "99.95%", checkedAt: "4 分钟前" },
+  "gemini-flash": { billing: "按量计费", input: "¥ 1.20", output: "¥ 4.80", cache: "¥ 0.12", unit: "/ 1M", throughput: "93.2 t/s", successRate: "99.81%", checkedAt: "8 分钟前" },
+  "qwen-coder-open": { billing: "按量计费", input: "¥ 0.86", output: "¥ 2.58", cache: "—", unit: "/ 1M", throughput: "68.5 t/s", successRate: "99.76%", checkedAt: "5 分钟前" },
+  "deepseek-reasoning-open": { billing: "按量计费", input: "¥ 1.10", output: "¥ 4.40", cache: "—", unit: "/ 1M", throughput: "41.2 t/s", successRate: "99.68%", checkedAt: "7 分钟前" },
+  "gpt-image": { billing: "按请求", output: "¥ 0.28", unit: "/ 张起", throughput: "—", successRate: "99.73%", checkedAt: "9 分钟前" },
+  "gemini-image": { billing: "按请求", output: "¥ 0.22", unit: "/ 张起", throughput: "—", successRate: "99.69%", checkedAt: "11 分钟前" },
+  "flux-kontext": { billing: "按请求", output: "¥ 0.12", unit: "/ 张起", throughput: "—", successRate: "99.51%", checkedAt: "13 分钟前" },
+  "qwen-image": { billing: "按请求", output: "¥ 0.08", unit: "/ 张起", throughput: "—", successRate: "99.62%", checkedAt: "12 分钟前" },
+  "seedance-video": { billing: "按请求", output: "¥ 0.52", unit: "/ 秒起", throughput: "—", successRate: "98.96%", checkedAt: "15 分钟前" },
+  "veo-video": { billing: "按请求", output: "¥ 2.80", unit: "/ 秒起", throughput: "—", successRate: "98.72%", checkedAt: "16 分钟前" },
+  "kling-video": { billing: "按请求", output: "¥ 0.64", unit: "/ 秒起", throughput: "—", successRate: "98.88%", checkedAt: "14 分钟前" },
+  "wan-video-open": { billing: "按请求", output: "¥ 0.18", unit: "/ 秒起", throughput: "—", successRate: "98.54%", checkedAt: "18 分钟前" },
+};
+
+export function enrichModelOffer(offer: ModelOffer): ModelOffer {
+  const evidence = MODEL_EVIDENCE[offer.id];
+  if (!evidence) return offer;
+  return {
+    ...offer,
+    pricing: { billing: evidence.billing, input: evidence.input, output: evidence.output, cache: evidence.cache, unit: evidence.unit },
+    performance: { latency: offer.latency, throughput: evidence.throughput, successRate: evidence.successRate, checkedAt: evidence.checkedAt },
+  };
+}
+
+export const CATALOG_OFFERS: ModelOffer[] = MODEL_OFFERS.map(enrichModelOffer);

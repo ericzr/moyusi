@@ -1,5 +1,5 @@
 import type { CatalogFilter, CatalogSelection, ModelOffer } from "../domain/catalog";
-import { MODEL_OFFERS } from "../features/catalog/catalogData";
+import { CATALOG_OFFERS } from "../features/catalog/catalogData";
 
 export function filterCatalog(offers: readonly ModelOffer[], filter: CatalogFilter = {}): ModelOffer[] {
   const normalized = filter.query?.trim().toLocaleLowerCase("zh-CN") ?? "";
@@ -13,11 +13,13 @@ export function filterCatalog(offers: readonly ModelOffer[], filter: CatalogFilt
     const matchesLatency = !filter.maxLatencySeconds || (offer.latencySeconds !== undefined && offer.latencySeconds <= filter.maxLatencySeconds);
     const matchesContext = !filter.minContextWindow || (offer.contextWindow !== undefined && offer.contextWindow >= filter.minContextWindow);
     const matchesProtocol = !filter.protocol || offer.protocols.includes(filter.protocol);
+    const matchesProvider = !filter.providers?.length || filter.providers.includes(offer.family);
+    const matchesBilling = !filter.billingTypes?.length || filter.billingTypes.includes(offer.pricing?.billing ?? (offer.modality === "视频" ? "按请求" : "按量计费"));
     const searchable = [offer.name, offer.modelId, offer.family, offer.summary, ...offer.tags]
       .join(" ")
       .toLocaleLowerCase("zh-CN");
     const matchesQuery = !normalized || searchable.includes(normalized);
-    return matchesModality && matchesKind && matchesTags && matchesOfferTypes && matchesRegions && matchesLatency && matchesContext && matchesProtocol && matchesQuery;
+    return matchesModality && matchesKind && matchesTags && matchesOfferTypes && matchesRegions && matchesLatency && matchesContext && matchesProtocol && matchesProvider && matchesBilling && matchesQuery;
   });
 
   return [...filtered].sort((left, right) => {
@@ -30,11 +32,11 @@ export function filterCatalog(offers: readonly ModelOffer[], filter: CatalogFilt
 
 export const catalogRepository = {
   list(filter: CatalogFilter = {}): ModelOffer[] {
-    return filterCatalog(MODEL_OFFERS, filter);
+    return filterCatalog(CATALOG_OFFERS, filter);
   },
 
   getById(modelId: string): ModelOffer | null {
-    return MODEL_OFFERS.find((offer) => offer.id === modelId) ?? null;
+    return CATALOG_OFFERS.find((offer) => offer.id === modelId) ?? null;
   },
 
   resolveSelection(modelId: string | null, sourceName: string | null): CatalogSelection | null {

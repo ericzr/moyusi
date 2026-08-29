@@ -4,6 +4,22 @@ export type OfferType = "统一余额" | "BYOK" | "共享算力" | "专属算力
 export type ModelRegion = "中国" | "亚太" | "全球";
 export type ModelProtocol = "OpenAI" | "Anthropic" | "Google";
 export type CatalogSort = "recommended" | "price" | "latency" | "context";
+export type CatalogBilling = "按量计费" | "按请求";
+
+export type CatalogPricing = {
+  billing: CatalogBilling;
+  input?: string;
+  output?: string;
+  cache?: string;
+  unit: string;
+};
+
+export type CatalogPerformance = {
+  latency: string;
+  throughput?: string;
+  successRate?: string;
+  checkedAt?: string;
+};
 
 export type SupplyOption = {
   name: string;
@@ -29,6 +45,8 @@ export type ModelOffer = {
   specValue: string;
   protocol: string;
   protocols: ModelProtocol[];
+  pricing?: CatalogPricing;
+  performance?: CatalogPerformance;
   /** Normalized fields used only for catalog comparisons; displayed pricing remains source-specific. */
   priceCny?: number;
   latencySeconds?: number;
@@ -53,6 +71,8 @@ export type CatalogFilter = {
   maxLatencySeconds?: number;
   minContextWindow?: number;
   protocol?: ModelProtocol;
+  providers?: string[];
+  billingTypes?: CatalogBilling[];
   sort?: CatalogSort;
 };
 
