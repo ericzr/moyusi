@@ -72,12 +72,19 @@ const REGION_FILTERS: ModelRegion[] = ["中国", "亚太", "全球"];
 const PROTOCOL_FILTERS: ModelProtocol[] = ["OpenAI", "Anthropic", "Google"];
 const BILLING_FILTERS: CatalogBilling[] = ["按量计费", "按请求"];
 
-const LATENCY_FILTERS = [
-  { value: undefined, label: "不限" },
-  { value: 2, label: "2 秒内" },
-  { value: 5, label: "5 秒内" },
-  { value: 20, label: "20 秒内" },
+const ACCESS_MODE_FILTERS: Array<{ value: OfferType; label: string }> = [
+  { value: "统一余额", label: "Moyusi 余额" },
+  { value: "BYOK", label: "自己的账号" },
+  { value: "共享算力", label: "共享算力" },
+  { value: "专属算力", label: "专属算力" },
+  { value: "自有端点", label: "自己的服务器" },
 ];
+
+const LATENCY_FILTERS: Record<ModelModality, Array<{ value?: number; label: string }>> = {
+  语言: [{ value: undefined, label: "不限" }, { value: 2, label: "2 秒内" }, { value: 5, label: "5 秒内" }],
+  图片: [{ value: undefined, label: "不限" }, { value: 15, label: "15 秒内" }, { value: 20, label: "20 秒内" }, { value: 30, label: "30 秒内" }],
+  视频: [{ value: undefined, label: "不限" }, { value: 20, label: "20 秒内" }, { value: 40, label: "40 秒内" }, { value: 60, label: "60 秒内" }],
+};
 
 const CONTEXT_FILTERS = [
   { value: undefined, label: "不限" },
@@ -107,7 +114,7 @@ export function ModelSquare({ onOpenDetail }: { onOpenDetail: (modelId: string) 
   const [sort, setSort] = useState<CatalogSort>("recommended");
   const [provider, setProvider] = useState("全部供应商");
   const [billing, setBilling] = useState<BillingFilter>("全部定价");
-  const [priceUnit, setPriceUnit] = useState<PriceUnit>("1M");
+  const priceUnit: PriceUnit = "1M";
   const providers = useMemo(() => ["全部供应商", ...new Set(catalogRepository.list({ modality }).map((offer) => offer.family))], [modality]);
   const catalogFilter = useMemo(() => ({
       modality,
@@ -136,6 +143,8 @@ export function ModelSquare({ onOpenDetail }: { onOpenDetail: (modelId: string) 
     setPrecision({ tags: [], offerTypes: [], regions: [] });
     setProvider("全部供应商");
     setBilling("全部定价");
+    setSort("recommended");
+    setShowPrecision(false);
   };
 
   const precisionCount = precision.tags.length
@@ -159,6 +168,7 @@ export function ModelSquare({ onOpenDetail }: { onOpenDetail: (modelId: string) 
     provider !== "全部供应商" ? { label: provider, onRemove: () => setProvider("全部供应商") } : null,
     billing !== "全部定价" ? { label: billing, onRemove: () => setBilling("全部定价") } : null,
     ...precision.tags.map((tag) => ({ label: tag, onRemove: () => setPrecision((current) => ({ ...current, tags: current.tags.filter((item) => item !== tag) })) })),
+    ...precision.offerTypes.map((type) => ({ label: ACCESS_MODE_FILTERS.find((item) => item.value === type)?.label ?? type, onRemove: () => setPrecision((current) => ({ ...current, offerTypes: current.offerTypes.filter((item) => item !== type) })) })),
     ...precision.regions.map((region) => ({ label: region, onRemove: () => setPrecision((current) => ({ ...current, regions: current.regions.filter((item) => item !== region) })) })),
     precision.protocol ? { label: precision.protocol, onRemove: () => setPrecision((current) => ({ ...current, protocol: undefined })) } : null,
     precision.minContextWindow ? { label: `上下文 ≥ ${Math.round(precision.minContextWindow / 1000)}K`, onRemove: () => setPrecision((current) => ({ ...current, minContextWindow: undefined })) } : null,
@@ -176,37 +186,35 @@ export function ModelSquare({ onOpenDetail }: { onOpenDetail: (modelId: string) 
       </header>
 
       <section className="market-controls" aria-label="模型筛选与结果工具栏">
-        <div className="market-filter-bar">
-          <div className="filter-bar-title"><SlidersHorizontal size={13} /><span>筛选</span></div>
+        <div className="market-type-row">
+          <span className="control-row-label">模型类型</span>
           <div className="modality-switcher" aria-label="按生成类型筛选模型">
             {MODALITIES.map(({ id, title, Icon }) => {
               const count = catalogRepository.list({ modality: id }).length;
               return <button key={id} type="button" data-active={modality === id} onClick={() => chooseModality(id)}><Icon size={13} /><span>{title}</span><small>{count}</small></button>;
             })}
           </div>
-          <div className="control-divider" />
+          <small>先确定要生成什么，再比较同类模型</small>
+        </div>
+        <div className="market-control-row">
           <div className="primary-filter-bar" aria-label="常用筛选">
-            <label className="filter-select"><span>供给</span><select aria-label="供给类型" value={filter} onChange={(event) => setFilter(event.target.value as Filter)}><option value="全部供给">全部</option><option value="闭源 API">闭源 API</option><option value="开放权重">开放权重</option></select></label>
+            <label className="filter-select"><span>开放性</span><select aria-label="供给类型" value={filter} onChange={(event) => setFilter(event.target.value as Filter)}><option value="全部供给">不限</option><option value="闭源 API">闭源 API</option><option value="开放权重">开放权重</option></select></label>
             <label className="filter-select"><span>供应商</span><select aria-label="供应商" value={provider} onChange={(event) => setProvider(event.target.value)}>{providers.map((item) => <option key={item} value={item}>{item}</option>)}</select></label>
             <label className="filter-select"><span>计费</span><select aria-label="定价方式" value={billing} onChange={(event) => setBilling(event.target.value as BillingFilter)}><option value="全部定价">全部</option>{BILLING_FILTERS.map((item) => <option key={item} value={item}>{item}</option>)}</select></label>
-            <button className="precision-trigger" type="button" aria-expanded={showPrecision} onClick={() => setShowPrecision((current) => !current)}><SlidersHorizontal size={13} />更多筛选{precisionCount > 0 && <b>{precisionCount}</b>}</button>
+            <button className="precision-trigger" type="button" aria-expanded={showPrecision} onClick={() => setShowPrecision((current) => !current)}><SlidersHorizontal size={13} />能力与性能{precisionCount > 0 && <b>{precisionCount}</b>}</button>
           </div>
-        </div>
-        <div className="result-tools">
-          <div className="price-mode-switch" aria-label="价格显示模式">
-            <button type="button" data-active={priceUnit === "1M"} onClick={() => setPriceUnit("1M")}>标准</button>
-            <button type="button" data-active={priceUnit === "1K"} onClick={() => setPriceUnit("1K")}>每 1K</button>
-          </div>
-          <label className="catalog-sort">
-            <span>排序</span>
-            <select aria-label="模型排序" value={sort} onChange={(event) => setSort(event.target.value as CatalogSort)}>
-              {SORT_OPTIONS.filter((option) => modality === "语言" || option.id !== "context").map((option) => <option key={option.id} value={option.id}>{option.label}</option>)}
-            </select>
-          </label>
-          <div className="view-switch" aria-label="切换模型呈现方式">
-            {VIEWS.map(({ id, label, Icon }) => (
-              <button key={id} type="button" aria-label={label} title={label} data-active={view === id} onClick={() => setView(id)}><Icon size={14} /><span>{label}</span></button>
-            ))}
+          <div className="result-tools">
+            <label className="catalog-sort">
+              <span>排序</span>
+              <select aria-label="模型排序" value={sort} onChange={(event) => setSort(event.target.value as CatalogSort)}>
+                {SORT_OPTIONS.filter((option) => modality === "语言" || option.id !== "context").map((option) => <option key={option.id} value={option.id}>{option.label}</option>)}
+              </select>
+            </label>
+            <div className="view-switch" aria-label="切换模型呈现方式">
+              {VIEWS.map(({ id, label, Icon }) => (
+                <button key={id} type="button" aria-label={label} title={label} data-active={view === id} onClick={() => setView(id)}><Icon size={14} /><span>{label}</span></button>
+              ))}
+            </div>
           </div>
         </div>
       </section>
@@ -237,18 +245,19 @@ function AdvancedFilterPanel({ modality, precision, setPrecision, onReset }: {
   const selectedCount = precision.tags.length + precision.offerTypes.length + precision.regions.length + Number(precision.maxLatencySeconds !== undefined) + Number(precision.minContextWindow !== undefined) + Number(precision.protocol !== undefined);
   return (
     <section className="advanced-filter-panel" aria-label="更多模型筛选">
-      <div className="advanced-filter-head"><div><strong>更多筛选</strong><span>只在需要时展开，用于精确比较能力和线路。</span></div><button type="button" onClick={onReset} disabled={selectedCount === 0}><RotateCcw size={12} />重置</button></div>
+      <div className="advanced-filter-head"><div><strong>{modality}模型的能力与性能</strong><span>这些维度只对当前模型类型生效，切换类型后自动清空。</span></div><button type="button" onClick={onReset} disabled={selectedCount === 0}><RotateCcw size={12} />重置</button></div>
       <div className="advanced-filter-grid">
-      <FilterSection title="模型标签">
+      <FilterSection title="任务能力">
         {FEATURE_FILTERS[modality].map((tag) => <FacetButton key={tag} active={precision.tags.includes(tag)} onClick={() => setPrecision((current) => ({ ...current, tags: toggleValue(current.tags, tag) }))}>{tag}</FacetButton>)}
       </FilterSection>
-      <FilterSection title="端点与地区">
+      <FilterSection title="获取方式">
+        {ACCESS_MODE_FILTERS.map((item) => <FacetButton key={item.value} active={precision.offerTypes.includes(item.value)} onClick={() => setPrecision((current) => ({ ...current, offerTypes: toggleValue(current.offerTypes, item.value) }))}>{item.label}</FacetButton>)}
+      </FilterSection>
+      <FilterSection title="性能与兼容">
+        {modality === "语言" && <label className="facet-select"><span>上下文</span><select aria-label="最小上下文" value={precision.minContextWindow ?? ""} onChange={(event) => setPrecision((current) => ({ ...current, minContextWindow: event.target.value ? Number(event.target.value) : undefined }))}>{CONTEXT_FILTERS.map((option) => <option key={option.label} value={option.value ?? ""}>{option.label}</option>)}</select></label>}
+        <label className="facet-select"><span>{modality === "视频" ? "排队" : "响应"}</span><select aria-label="响应上限" value={precision.maxLatencySeconds ?? ""} onChange={(event) => setPrecision((current) => ({ ...current, maxLatencySeconds: event.target.value ? Number(event.target.value) : undefined }))}>{LATENCY_FILTERS[modality].map((option) => <option key={option.label} value={option.value ?? ""}>{option.label}</option>)}</select></label>
         {PROTOCOL_FILTERS.map((protocol) => <FacetButton key={protocol} active={precision.protocol === protocol} onClick={() => setPrecision((current) => ({ ...current, protocol: current.protocol === protocol ? undefined : protocol }))}>{protocol}</FacetButton>)}
         {REGION_FILTERS.map((region) => <FacetButton key={region} active={precision.regions.includes(region)} onClick={() => setPrecision((current) => ({ ...current, regions: toggleValue(current.regions, region) }))}>{region}</FacetButton>)}
-      </FilterSection>
-      <FilterSection title="上下文与响应">
-        <label className="facet-select"><span>上下文</span><select aria-label="最小上下文" value={precision.minContextWindow ?? ""} onChange={(event) => setPrecision((current) => ({ ...current, minContextWindow: event.target.value ? Number(event.target.value) : undefined }))}>{CONTEXT_FILTERS.map((option) => <option key={option.label} value={option.value ?? ""}>{option.label}</option>)}</select></label>
-        <label className="facet-select"><span>响应</span><select aria-label="响应上限" value={precision.maxLatencySeconds ?? ""} onChange={(event) => setPrecision((current) => ({ ...current, maxLatencySeconds: event.target.value ? Number(event.target.value) : undefined }))}>{LATENCY_FILTERS.map((option) => <option key={option.label} value={option.value ?? ""}>{option.label}</option>)}</select></label>
       </FilterSection>
       </div>
     </section>
@@ -257,10 +266,6 @@ function AdvancedFilterPanel({ modality, precision, setPrecision, onReset }: {
 
 function FilterSection({ title, children }: { title: string; children: React.ReactNode }) {
   return <section className="catalog-filter-section"><h3>{title}</h3><div>{children}</div></section>;
-}
-
-function FilterGroup({ label, children }: { label: string; children: React.ReactNode }) {
-  return <div className="precision-group"><span>{label}</span><div>{children}</div></div>;
 }
 
 function FacetButton({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
