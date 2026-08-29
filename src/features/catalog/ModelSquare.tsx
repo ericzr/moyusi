@@ -175,34 +175,39 @@ export function ModelSquare({ onOpenDetail }: { onOpenDetail: (modelId: string) 
         </label>
       </header>
 
-      <section className="market-controls" aria-label="模型分类与结果工具栏">
-        <div className="modality-switcher" aria-label="按生成类型选择模型">
-          {MODALITIES.map(({ id, title, Icon }) => {
-            const count = catalogRepository.list({ modality: id }).length;
-            return <button key={id} type="button" data-active={modality === id} onClick={() => chooseModality(id)}><Icon size={14} /><span>{title}</span><small>{count}</small></button>;
-          })}
+      <section className="market-controls" aria-label="模型筛选与结果工具栏">
+        <div className="market-filter-bar">
+          <div className="filter-bar-title"><SlidersHorizontal size={13} /><span>筛选</span></div>
+          <div className="modality-switcher" aria-label="按生成类型筛选模型">
+            {MODALITIES.map(({ id, title, Icon }) => {
+              const count = catalogRepository.list({ modality: id }).length;
+              return <button key={id} type="button" data-active={modality === id} onClick={() => chooseModality(id)}><Icon size={13} /><span>{title}</span><small>{count}</small></button>;
+            })}
+          </div>
+          <div className="control-divider" />
+          <div className="primary-filter-bar" aria-label="常用筛选">
+            <label className="filter-select"><span>供给</span><select aria-label="供给类型" value={filter} onChange={(event) => setFilter(event.target.value as Filter)}><option value="全部供给">全部</option><option value="闭源 API">闭源 API</option><option value="开放权重">开放权重</option></select></label>
+            <label className="filter-select"><span>供应商</span><select aria-label="供应商" value={provider} onChange={(event) => setProvider(event.target.value)}>{providers.map((item) => <option key={item} value={item}>{item}</option>)}</select></label>
+            <label className="filter-select"><span>计费</span><select aria-label="定价方式" value={billing} onChange={(event) => setBilling(event.target.value as BillingFilter)}><option value="全部定价">全部</option>{BILLING_FILTERS.map((item) => <option key={item} value={item}>{item}</option>)}</select></label>
+            <button className="precision-trigger" type="button" aria-expanded={showPrecision} onClick={() => setShowPrecision((current) => !current)}><SlidersHorizontal size={13} />更多筛选{precisionCount > 0 && <b>{precisionCount}</b>}</button>
+          </div>
         </div>
-        <div className="control-divider" />
-        <div className="primary-filter-bar" aria-label="常用筛选">
-          <label className="filter-select"><span>供给</span><select aria-label="供给类型" value={filter} onChange={(event) => setFilter(event.target.value as Filter)}><option value="全部供给">全部</option><option value="闭源 API">闭源 API</option><option value="开放权重">开放权重</option></select></label>
-          <label className="filter-select"><span>供应商</span><select aria-label="供应商" value={provider} onChange={(event) => setProvider(event.target.value)}>{providers.map((item) => <option key={item} value={item}>{item}</option>)}</select></label>
-          <label className="filter-select"><span>计费</span><select aria-label="定价方式" value={billing} onChange={(event) => setBilling(event.target.value as BillingFilter)}><option value="全部定价">全部</option>{BILLING_FILTERS.map((item) => <option key={item} value={item}>{item}</option>)}</select></label>
-          <button className="precision-trigger" type="button" aria-expanded={showPrecision} onClick={() => setShowPrecision((current) => !current)}><SlidersHorizontal size={13} />更多筛选{precisionCount > 0 && <b>{precisionCount}</b>}</button>
-        </div>
-        <div className="price-mode-switch" aria-label="价格显示模式">
-          <button type="button" data-active={priceUnit === "1M"} onClick={() => setPriceUnit("1M")}>标准</button>
-          <button type="button" data-active={priceUnit === "1K"} onClick={() => setPriceUnit("1K")}>每 1K</button>
-        </div>
-        <label className="catalog-sort">
-          <span>排序</span>
-          <select aria-label="模型排序" value={sort} onChange={(event) => setSort(event.target.value as CatalogSort)}>
-            {SORT_OPTIONS.filter((option) => modality === "语言" || option.id !== "context").map((option) => <option key={option.id} value={option.id}>{option.label}</option>)}
-          </select>
-        </label>
-        <div className="view-switch" aria-label="切换模型呈现方式">
-          {VIEWS.map(({ id, label, Icon }) => (
-            <button key={id} type="button" aria-label={label} title={label} data-active={view === id} onClick={() => setView(id)}><Icon size={14} /><span>{label}</span></button>
-          ))}
+        <div className="result-tools">
+          <div className="price-mode-switch" aria-label="价格显示模式">
+            <button type="button" data-active={priceUnit === "1M"} onClick={() => setPriceUnit("1M")}>标准</button>
+            <button type="button" data-active={priceUnit === "1K"} onClick={() => setPriceUnit("1K")}>每 1K</button>
+          </div>
+          <label className="catalog-sort">
+            <span>排序</span>
+            <select aria-label="模型排序" value={sort} onChange={(event) => setSort(event.target.value as CatalogSort)}>
+              {SORT_OPTIONS.filter((option) => modality === "语言" || option.id !== "context").map((option) => <option key={option.id} value={option.id}>{option.label}</option>)}
+            </select>
+          </label>
+          <div className="view-switch" aria-label="切换模型呈现方式">
+            {VIEWS.map(({ id, label, Icon }) => (
+              <button key={id} type="button" aria-label={label} title={label} data-active={view === id} onClick={() => setView(id)}><Icon size={14} /><span>{label}</span></button>
+            ))}
+          </div>
         </div>
       </section>
 
