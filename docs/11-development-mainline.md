@@ -167,13 +167,13 @@ WorkspaceProfile 先覆盖 MCP、Skills 和 Prompts，再扩展经审核记忆�
 
 ## 7. 下一开发批次
 
-下一批只做 Stage 2 的第一条纵向切片：
+架构优先后，下一批先做控制面命令合同，再回到路由闭环：
 
-1. 建 typed mock API，并加入 loading/empty/error/stale 状态；
-2. 将模型与供给 fixture 移出 feature 目录，按 Catalog DTO/Domain Model 映射；
-3. 让 BYOK ImportGrant 由网页与桌面 fixture 两端领取，替换浏览器 mock；
-4. 为 Codex/Claude Code 输出真实的 mock 配置 diff、确认、验证与回滚记录；
-5. 加一条浏览器 E2E，锁住刷新、返回、余额不足、BYOK 分流与迁移确认。
+1. 为连接来源、创建调用 Key、保存路由、测试端点和创建迁移计划定义独立 command/result 类型；
+2. 为每个命令加入 pending、succeeded、failed、expired、rollback-required 状态；
+3. 将 `ControlPlaneSnapshot` 接入工作台摘要读取，保持快照只读、命令可审计；
+4. 在此基础上再完善 Desktop Bridge 的配置 diff、确认、验证与回滚；
+5. 最后加入浏览器 E2E，锁住“模型选择 → 命令执行 → 路由生效 → 用量可见”。
 
 在此闭环通过前，不开始真实充值、生产上游凭证或本机配置写入。
 

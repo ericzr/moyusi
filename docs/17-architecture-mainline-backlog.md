@@ -11,8 +11,10 @@
 - 模型广场到工作台的来源选择、接入分流和可恢复路由演示。
 - 统一余额、BYOK、共享/专属算力、自有端点的权限边界表达。
 - 模型来源级价格、性能和数据策略证据。
+- `ControlPlaneSnapshot`：默认项目、来源授权、脱敏调用 Key、Desktop 设备、费用和 Workspace 资产的只读投影。
+- 控制面命令合同：连接来源、创建调用 Key、保存路由、测试端点、创建迁移计划均返回可轮询的 operation 状态。
 
-## 下一批：控制面合同（P0）
+## 下一批：控制面命令与发布状态（P0）
 
 1. **身份与项目**
    - `User`、默认 `Project`、`DesktopDevice`、`ApiCredential` 类型。
@@ -23,6 +25,9 @@
 3. **目录发布**
    - `CatalogSnapshot`、`CatalogVersion`、模型/来源上下架状态。
    - 价格版本、探测窗口、许可证和数据政策必须可追溯到发布版本。
+4. **命令边界**
+   - 把“连接来源、创建 Key、保存路由、测试端点、创建迁移计划”建成独立命令，不允许直接修改快照。
+   - 每个命令返回 operation/status，支持 pending、succeeded、failed、expired 和 rollback-required。
 
 ## 再下一批：网关与计量合同（P0）
 

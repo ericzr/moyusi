@@ -145,6 +145,8 @@ PriceVersion
 
 控制面摘要使用独立的 `ControlPlaneSnapshot` 合同，聚合默认项目、来源授权状态、平台 Key 脱敏摘要、Desktop 设备状态、账务摘要和 Workspace 资产数量。该快照不是数据库表的替代，而是面向 Web/桌面端的读取投影；写操作仍应拆成来源授权、路由变更、充值订单和迁移应用等明确命令。
 
+写操作统一使用 `ControlPlaneCommand → OperationResult`：命令只表达意图和必要引用，结果携带 `pending / succeeded / failed / expired / rollback-required` 状态以及可安全展示的错误对象。快照与命令分离后，Web 可以轮询状态，Desktop 可以异步完成本地写入，失败时也不会把半完成状态伪装成成功。
+
 `RouteHealthSample` 是特定探测定义、地区和时间下的观测，不等于 SLA。对外聚合必须携带窗口、样本量和最后更新时间；无新鲜样本时状态为 `unknown/stale`，不能沿用旧的“正常”。
 
 ### Open model serving
