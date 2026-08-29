@@ -54,6 +54,14 @@ describe("catalog repository", () => {
     expect(results[0]?.performance?.successRate).toBe("99.92%");
   });
 
+  it("exposes detail-ready capability and API metadata", () => {
+    const offer = catalogRepository.getById("claude-sonnet");
+    expect(offer?.groups?.length).toBeGreaterThan(0);
+    expect(offer?.capabilities).toEqual(expect.arrayContaining(["函数调用", "结构化输出"]));
+    expect(offer?.maxOutputTokens).toBe(32_768);
+    expect(offer?.dataRetention).toContain("不保存");
+  });
+
   it("sorts by normalized measurements without mutating its input", () => {
     const languageOffers = catalogRepository.list({ modality: "语言" });
     const priceSorted = filterCatalog(languageOffers, { sort: "price" });

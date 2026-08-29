@@ -403,8 +403,21 @@ const MODEL_EVIDENCE: Record<string, { billing: CatalogBilling; input?: string; 
 export function enrichModelOffer(offer: ModelOffer): ModelOffer {
   const evidence = MODEL_EVIDENCE[offer.id];
   if (!evidence) return offer;
+  const capabilities = offer.modality === "语言"
+    ? [...offer.tags, "流式输出", "系统提示词", "函数调用", "结构化输出"]
+    : offer.modality === "图片"
+      ? [...offer.tags, "图像输入", "异步任务"]
+      : [...offer.tags, "异步任务", "任务状态回调"];
   return {
     ...offer,
+    groups: offer.sources.map((source) => source.name.replace(/（演示）/g, "")).slice(0, 3),
+    capabilities: [...new Set(capabilities)],
+    endpointTypes: offer.protocols,
+    maxOutputTokens: offer.modality === "语言" ? 32_768 : undefined,
+    knowledgeCutoff: offer.kind === "开放权重" ? "随版本发布" : "由上游提供",
+    releasedAt: "目录已核验",
+    license: offer.kind === "开放权重" ? "开放权重 · 许可证以模型仓库为准" : "商业闭源",
+    dataRetention: "Moyusi 默认不保存请求正文",
     pricing: { billing: evidence.billing, input: evidence.input, output: evidence.output, cache: evidence.cache, unit: evidence.unit },
     performance: { latency: offer.latency, throughput: evidence.throughput, successRate: evidence.successRate, checkedAt: evidence.checkedAt },
   };

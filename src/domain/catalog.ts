@@ -45,6 +45,14 @@ export type ModelOffer = {
   specValue: string;
   protocol: string;
   protocols: ModelProtocol[];
+  groups?: string[];
+  capabilities?: string[];
+  endpointTypes?: string[];
+  maxOutputTokens?: number;
+  knowledgeCutoff?: string;
+  releasedAt?: string;
+  license?: string;
+  dataRetention?: string;
   pricing?: CatalogPricing;
   performance?: CatalogPerformance;
   /** Normalized fields used only for catalog comparisons; displayed pricing remains source-specific. */

@@ -14,6 +14,7 @@ import {
   Rows3,
   Search,
   Server,
+  ShieldCheck,
   SlidersHorizontal,
   Video,
   WalletCards,
@@ -48,6 +49,7 @@ type PrecisionFilters = {
   protocol?: ModelProtocol;
 };
 type BillingFilter = CatalogBilling | "全部定价";
+type PriceUnit = "1M" | "1K";
 
 const MODALITIES: Array<{ id: ModelModality; title: string; Icon: typeof MessageSquareText }> = [
   { id: "语言", title: "语言", Icon: MessageSquareText },
@@ -106,6 +108,7 @@ export function ModelSquare({ onOpenDetail }: { onOpenDetail: (modelId: string) 
   const [sort, setSort] = useState<CatalogSort>("recommended");
   const [provider, setProvider] = useState("全部供应商");
   const [billing, setBilling] = useState<BillingFilter>("全部定价");
+  const [priceUnit, setPriceUnit] = useState<PriceUnit>("1M");
   const providers = useMemo(() => ["全部供应商", ...new Set(catalogRepository.list({ modality }).map((offer) => offer.family))], [modality]);
   const catalogFilter = useMemo(() => ({
       modality,
@@ -155,7 +158,7 @@ export function ModelSquare({ onOpenDetail }: { onOpenDetail: (modelId: string) 
         </label>
       </header>
 
-      <section className="market-controls" aria-label="模型筛选与视图">
+      <section className="market-controls" aria-label="模型分类与结果工具栏">
         <div className="modality-switcher" aria-label="按生成类型选择模型">
           {MODALITIES.map(({ id, title, Icon }) => {
             const count = catalogRepository.list({ modality: id }).length;
@@ -163,32 +166,10 @@ export function ModelSquare({ onOpenDetail }: { onOpenDetail: (modelId: string) 
           })}
         </div>
         <div className="control-divider" />
-        <label className="kind-select">
-          <span>供给类型</span>
-          <select aria-label="按开放性筛选模型" value={filter} onChange={(event) => setFilter(event.target.value as Filter)}>
-            {(["全部供给", "闭源 API", "开放权重"] as Filter[]).map((item) => <option key={item} value={item}>{item}</option>)}
-          </select>
-        </label>
-        <div className="control-divider" />
-        <label className="kind-select provider-select">
-          <span>供应商</span>
-          <select aria-label="按供应商筛选模型" value={provider} onChange={(event) => setProvider(event.target.value)}>
-            {providers.map((item) => <option key={item} value={item}>{item}</option>)}
-          </select>
-        </label>
-        <label className="kind-select billing-select">
-          <span>定价</span>
-          <select aria-label="按定价方式筛选模型" value={billing} onChange={(event) => setBilling(event.target.value as BillingFilter)}>
-            <option value="全部定价">全部定价</option>
-            {BILLING_FILTERS.map((item) => <option key={item} value={item}>{item}</option>)}
-          </select>
-        </label>
-        <div className="control-divider" />
-        <button className="precision-trigger" type="button" aria-expanded={showPrecision} onClick={() => setShowPrecision((current) => !current)}>
-          <SlidersHorizontal size={14} aria-hidden="true" />
-          <span>精确筛选</span>
-          {precisionCount > 0 && <b>{precisionCount}</b>}
-        </button>
+        <div className="price-mode-switch" aria-label="价格显示模式">
+          <button type="button" data-active={priceUnit === "1M"} onClick={() => setPriceUnit("1M")}>标准</button>
+          <button type="button" data-active={priceUnit === "1K"} onClick={() => setPriceUnit("1K")}>每 1K</button>
+        </div>
         <label className="catalog-sort">
           <span>排序</span>
           <select aria-label="模型排序" value={sort} onChange={(event) => setSort(event.target.value as CatalogSort)}>
@@ -202,37 +183,63 @@ export function ModelSquare({ onOpenDetail }: { onOpenDetail: (modelId: string) 
         </div>
       </section>
 
-      {showPrecision && (
-        <section className="precision-panel" aria-label="精确筛选">
-          <FilterGroup label="用途">
-            {FEATURE_FILTERS[modality].map((tag) => <FacetButton key={tag} active={precision.tags.includes(tag)} onClick={() => setPrecision((current) => ({ ...current, tags: toggleValue(current.tags, tag) }))}>{tag}</FacetButton>)}
-          </FilterGroup>
-          <FilterGroup label="接入方式">
-            {ACCESS_FILTERS.map((mode) => <FacetButton key={mode} active={precision.offerTypes.includes(mode)} onClick={() => setPrecision((current) => ({ ...current, offerTypes: toggleValue(current.offerTypes, mode) }))}>{mode}</FacetButton>)}
-          </FilterGroup>
-          <FilterGroup label="服务地区">
-            {REGION_FILTERS.map((region) => <FacetButton key={region} active={precision.regions.includes(region)} onClick={() => setPrecision((current) => ({ ...current, regions: toggleValue(current.regions, region) }))}>{region}</FacetButton>)}
-          </FilterGroup>
-          <FilterGroup label="响应上限">
-            <label className="facet-select"><select aria-label="响应上限" value={precision.maxLatencySeconds ?? ""} onChange={(event) => setPrecision((current) => ({ ...current, maxLatencySeconds: event.target.value ? Number(event.target.value) : undefined }))}>{LATENCY_FILTERS.map((option) => <option key={option.label} value={option.value ?? ""}>{option.label}</option>)}</select></label>
-          </FilterGroup>
-          {modality === "语言" && <FilterGroup label="上下文"><label className="facet-select"><select aria-label="最小上下文" value={precision.minContextWindow ?? ""} onChange={(event) => setPrecision((current) => ({ ...current, minContextWindow: event.target.value ? Number(event.target.value) : undefined }))}>{CONTEXT_FILTERS.map((option) => <option key={option.label} value={option.value ?? ""}>{option.label}</option>)}</select></label></FilterGroup>}
-          <FilterGroup label="接口兼容">
-            {PROTOCOL_FILTERS.map((protocol) => <FacetButton key={protocol} active={precision.protocol === protocol} onClick={() => setPrecision((current) => ({ ...current, protocol: current.protocol === protocol ? undefined : protocol }))}>{protocol}</FacetButton>)}
-          </FilterGroup>
-          <button className="precision-reset" type="button" onClick={resetPrecision} disabled={precisionCount === 0} title="清除精确筛选"><RotateCcw size={13} /><span>清除</span></button>
+      <section className="market-browser-layout">
+        <FilterSidebar modality={modality} filter={filter} setFilter={setFilter} providers={providers} provider={provider} setProvider={setProvider} billing={billing} setBilling={setBilling} precision={precision} setPrecision={setPrecision} onReset={resetPrecision} />
+        <section className="catalog-section">
+          <div className="catalog-meta"><span>{offers.length} 个模型 · {sourceCount} 个可切换来源</span><span>{catalogState === "loading" ? "正在更新目录…" : catalogState === "error" ? "目录更新失败，显示上次结果" : "输入 / 输出价格、延迟与成功率均来自最近一次探测"}</span></div>
+          <div className="catalog-layout">
+            {view === "compact" && <CompactResults offers={offers} priceUnit={priceUnit} onOpenDetail={(offer) => onOpenDetail(offer.id)} onReset={resetPrecision} />}
+            {view === "cards" && <CardResults offers={offers} priceUnit={priceUnit} onOpenDetail={(offer) => onOpenDetail(offer.id)} onReset={resetPrecision} />}
+          </div>
         </section>
-      )}
-
-      <section className="catalog-section">
-        <div className="catalog-meta"><span>{offers.length} 个模型 · {sourceCount} 个可切换来源</span><span>{catalogState === "loading" ? "正在更新目录…" : catalogState === "error" ? "目录更新失败，显示上次结果" : "输入 / 输出价格、延迟与成功率均来自最近一次探测"}</span></div>
-        <div className="catalog-layout">
-          {view === "compact" && <CompactResults offers={offers} onOpenDetail={(offer) => onOpenDetail(offer.id)} onReset={resetPrecision} />}
-          {view === "cards" && <CardResults offers={offers} onOpenDetail={(offer) => onOpenDetail(offer.id)} onReset={resetPrecision} />}
-        </div>
       </section>
     </main>
   );
+}
+
+function FilterSidebar({ modality, filter, setFilter, providers, provider, setProvider, billing, setBilling, precision, setPrecision, onReset }: {
+  modality: ModelModality;
+  filter: Filter;
+  setFilter: (value: Filter) => void;
+  providers: string[];
+  provider: string;
+  setProvider: (value: string) => void;
+  billing: BillingFilter;
+  setBilling: (value: BillingFilter) => void;
+  precision: PrecisionFilters;
+  setPrecision: React.Dispatch<React.SetStateAction<PrecisionFilters>>;
+  onReset: () => void;
+}) {
+  const selectedCount = precision.tags.length + precision.offerTypes.length + precision.regions.length + Number(precision.maxLatencySeconds !== undefined) + Number(precision.minContextWindow !== undefined) + Number(precision.protocol !== undefined) + Number(filter !== "全部供给") + Number(provider !== "全部供应商") + Number(billing !== "全部定价");
+  return (
+    <aside className="catalog-filter-sidebar" aria-label="模型筛选">
+      <div className="filter-sidebar-head"><div><h2>筛选</h2><p>按供应商、类型和能力细化模型。</p></div><button type="button" onClick={onReset} disabled={selectedCount === 0}><RotateCcw size={12} />重置</button></div>
+      <FilterSection title="供给类型">
+        {(["全部供给", "闭源 API", "开放权重"] as Filter[]).map((item) => <FacetButton key={item} active={filter === item} onClick={() => setFilter(item)}>{item}</FacetButton>)}
+      </FilterSection>
+      <FilterSection title="供应商">
+        {providers.map((item) => <FacetButton key={item} active={provider === item} onClick={() => setProvider(item)}>{item}<small>{item === "全部供应商" ? catalogRepository.list({ modality }).length : catalogRepository.list({ modality, providers: [item] }).length}</small></FacetButton>)}
+      </FilterSection>
+      <FilterSection title="模型标签">
+        {FEATURE_FILTERS[modality].map((tag) => <FacetButton key={tag} active={precision.tags.includes(tag)} onClick={() => setPrecision((current) => ({ ...current, tags: toggleValue(current.tags, tag) }))}>{tag}</FacetButton>)}
+      </FilterSection>
+      <FilterSection title="定价方式">
+        {(["全部定价", ...BILLING_FILTERS] as BillingFilter[]).map((item) => <FacetButton key={item} active={billing === item} onClick={() => setBilling(item)}>{item}<small>{item === "全部定价" ? catalogRepository.list({ modality }).length : catalogRepository.list({ modality, billingTypes: [item] }).length}</small></FacetButton>)}
+      </FilterSection>
+      <FilterSection title="端点与地区">
+        {PROTOCOL_FILTERS.map((protocol) => <FacetButton key={protocol} active={precision.protocol === protocol} onClick={() => setPrecision((current) => ({ ...current, protocol: current.protocol === protocol ? undefined : protocol }))}>{protocol}</FacetButton>)}
+        {REGION_FILTERS.map((region) => <FacetButton key={region} active={precision.regions.includes(region)} onClick={() => setPrecision((current) => ({ ...current, regions: toggleValue(current.regions, region) }))}>{region}</FacetButton>)}
+      </FilterSection>
+      <FilterSection title="上下文与响应">
+        <label className="facet-select"><span>上下文</span><select aria-label="最小上下文" value={precision.minContextWindow ?? ""} onChange={(event) => setPrecision((current) => ({ ...current, minContextWindow: event.target.value ? Number(event.target.value) : undefined }))}>{CONTEXT_FILTERS.map((option) => <option key={option.label} value={option.value ?? ""}>{option.label}</option>)}</select></label>
+        <label className="facet-select"><span>响应</span><select aria-label="响应上限" value={precision.maxLatencySeconds ?? ""} onChange={(event) => setPrecision((current) => ({ ...current, maxLatencySeconds: event.target.value ? Number(event.target.value) : undefined }))}>{LATENCY_FILTERS.map((option) => <option key={option.label} value={option.value ?? ""}>{option.label}</option>)}</select></label>
+      </FilterSection>
+    </aside>
+  );
+}
+
+function FilterSection({ title, children }: { title: string; children: React.ReactNode }) {
+  return <section className="catalog-filter-section"><h3>{title}</h3><div>{children}</div></section>;
 }
 
 function FilterGroup({ label, children }: { label: string; children: React.ReactNode }) {
@@ -287,7 +294,7 @@ export function ModelDetailPage({
   );
 }
 
-function CompactResults({ offers, onOpenDetail, onReset }: { offers: ModelOffer[]; onOpenDetail: (offer: ModelOffer) => void; onReset: () => void }) {
+function CompactResults({ offers, priceUnit, onOpenDetail, onReset }: { offers: ModelOffer[]; priceUnit: PriceUnit; onOpenDetail: (offer: ModelOffer) => void; onReset: () => void }) {
   return (
     <div className="catalog-results">
       <div className="result-header" aria-hidden="true"><span>模型</span><span>适合</span><span>可选来源</span><span>价格</span><span>性能</span><span>状态</span><span>操作</span></div>
@@ -300,7 +307,7 @@ function CompactResults({ offers, onOpenDetail, onReset }: { offers: ModelOffer[
             </span>
             <span className="offer-use">{offer.tags.slice(0, 2).map((tag) => <small key={tag}>{tag}</small>)}</span>
             <span className="offer-fact"><small>{offer.sources[0]?.recommended ? "主来源" : "可切换来源"}</small><strong>{offer.sources.length} 个来源</strong><em>{offer.sources[0]?.mode ?? offer.offerType}</em></span>
-            <span className="offer-price"><strong>{inputPrice(offer)}</strong><small>{outputPrice(offer)}</small></span>
+            <span className="offer-price"><strong>{inputPrice(offer, priceUnit)}</strong><small>{outputPrice(offer, priceUnit)}</small></span>
             <span className="offer-latency"><strong>{offer.performance?.latency ?? offer.latency}</strong><small>{offer.performance?.throughput ?? "吞吐待测"}</small></span>
             <span className="offer-health"><strong><i />{offer.performance?.successRate ?? offer.health}</strong><small>{offer.performance?.checkedAt ?? "24h 窗口"}</small></span>
             <button className="row-action" type="button" onClick={() => onOpenDetail(offer)}>查看<ChevronRight size={12} /></button>
@@ -312,7 +319,7 @@ function CompactResults({ offers, onOpenDetail, onReset }: { offers: ModelOffer[
   );
 }
 
-function CardResults({ offers, onOpenDetail, onReset }: { offers: ModelOffer[]; onOpenDetail: (offer: ModelOffer) => void; onReset: () => void }) {
+function CardResults({ offers, priceUnit, onOpenDetail, onReset }: { offers: ModelOffer[]; priceUnit: PriceUnit; onOpenDetail: (offer: ModelOffer) => void; onReset: () => void }) {
   if (offers.length === 0) return <div className="catalog-results"><EmptyResults onReset={onReset} /></div>;
   return (
     <div className="model-card-grid">
@@ -322,7 +329,7 @@ function CardResults({ offers, onOpenDetail, onReset }: { offers: ModelOffer[]; 
           <code className="model-card-id">{offer.modelId}</code>
           <span className="model-card-summary">{offer.summary}</span>
           <span className="model-card-facts">
-            <span><small>{offer.pricing?.input ? "输入 / 输出" : "单元价格"}</small><strong>{inputPrice(offer)} · {outputPrice(offer)}</strong></span>
+            <span><small>{offer.pricing?.input ? "输入 / 输出" : "单元价格"}</small><strong>{inputPrice(offer, priceUnit)} · {outputPrice(offer, priceUnit)}</strong></span>
             <span><small>响应 / 吞吐</small><strong>{offer.performance?.latency ?? offer.latency} · {offer.performance?.throughput ?? "—"}</strong></span>
             <span><small>最近成功率</small><strong className="card-health"><i />{offer.performance?.successRate ?? offer.health}</strong></span>
             <span><small>来源 / 接口</small><strong>{offer.sources.length} 个 · {offer.protocol}</strong></span>
@@ -344,16 +351,23 @@ function priceSecondary(offer: ModelOffer): string {
   return offer.unit;
 }
 
-function inputPrice(offer: ModelOffer): string {
-  return offer.pricing?.input ? `${offer.pricing.input}${offer.pricing.unit}` : offer.price;
+function inputPrice(offer: ModelOffer, unit: PriceUnit = "1M"): string {
+  if (!offer.pricing?.input) return offer.price;
+  return unit === "1K" ? `${formatPerThousand(offer.pricing.input)} / 1K` : `${offer.pricing.input}${offer.pricing.unit}`;
 }
 
-function outputPrice(offer: ModelOffer): string {
-  if (offer.pricing?.output) return `输出 ${offer.pricing.output}${offer.pricing.unit}`;
+function outputPrice(offer: ModelOffer, unit: PriceUnit = "1M"): string {
+  if (offer.pricing?.output) return unit === "1K" ? `输出 ${formatPerThousand(offer.pricing.output)} / 1K` : `输出 ${offer.pricing.output}${offer.pricing.unit}`;
   return priceSecondary(offer);
 }
 
+function formatPerThousand(price: string): string {
+  const numeric = Number(price.replace(/[^\d.]/g, ""));
+  return Number.isFinite(numeric) ? `¥ ${(numeric / 1000).toFixed(4)}` : price;
+}
+
 function ModelDetail({ offer, onBack, onChooseSource }: { offer: ModelOffer; onBack: () => void; onChooseSource: (source: SupplyOption) => void }) {
+  const [detailTab, setDetailTab] = useState<"overview" | "performance" | "api">("overview");
   return (
     <>
       <nav className="detail-nav" aria-label="模型详情导航"><button type="button" onClick={onBack}><ArrowLeft size={14} />返回模型广场</button></nav>
@@ -379,7 +393,13 @@ function ModelDetail({ offer, onBack, onChooseSource }: { offer: ModelOffer; onB
         <div><span>可用能力</span><strong>{offer.tags.slice(0, 4).join(" · ")}</strong></div>
       </section>
 
-      <section className="detail-sources">
+      <nav className="detail-tabs" aria-label="模型详情分区">
+        <button type="button" data-active={detailTab === "overview"} onClick={() => setDetailTab("overview")}>概览</button>
+        <button type="button" data-active={detailTab === "performance"} onClick={() => setDetailTab("performance")}>性能</button>
+        <button type="button" data-active={detailTab === "api"} onClick={() => setDetailTab("api")}>API 接入</button>
+      </nav>
+
+      {detailTab === "overview" && <section className="detail-sources">
         <div className="detail-section-head"><div><h2>同一模型，选择不同来源</h2><p>模型能力相同，来源会影响价格、速度、稳定性和结算方式。</p></div><span>{offer.sources.length} 个可用来源</span></div>
         <div className="source-table">
           <div className="source-table-head" aria-hidden="true"><span>模型来源</span><span>怎么付费</span><span>价格</span><span>响应 / 排队</span><span>稳定性</span><span>操作</span></div>
@@ -394,7 +414,22 @@ function ModelDetail({ offer, onBack, onChooseSource }: { offer: ModelOffer; onB
             </article>
           ))}
         </div>
-      </section>
+      </section>}
+
+      {detailTab === "performance" && <section className="detail-performance">
+        <div className="detail-section-head"><div><h2>线路性能</h2><p>指标来自最近探测窗口；不同地区和负载下的实际结果会变化。</p></div><span>{offer.performance?.checkedAt ?? "待更新"}</span></div>
+        <div className="performance-table">
+          <div className="performance-row performance-head"><span>来源</span><span>吞吐</span><span>响应 / 排队</span><span>成功率</span><span>状态</span></div>
+          {offer.sources.map((source) => <div className="performance-row" key={`${offer.id}-perf-${source.name}`}><strong>{source.name}</strong><span>{offer.performance?.throughput ?? "—"}</span><span>{source.latency}</span><span className="source-health"><i />{source.health}</span><span>{source.recommended ? "主来源" : "备用来源"}</span></div>)}
+        </div>
+        <div className="evidence-note"><ShieldCheck size={14} /><span>成功率是探测结果，不等同于合同 SLA；生产环境会同时展示地区、样本数、p50/p95 和更新时间。</span></div>
+      </section>}
+
+      {detailTab === "api" && <section className="detail-api">
+        <div className="detail-section-head"><div><h2>调用示例</h2><p>复制后只需替换 Moyusi API Key 和模型 ID；不同协议的参数能力会在请求前校验。</p></div><span>{offer.protocol}</span></div>
+        <div className="api-code-card"><div className="api-code-head"><span>cURL · {offer.protocol}</span><button type="button" onClick={() => navigator.clipboard?.writeText(apiSnippet(offer))}>复制示例</button></div><pre><code>{apiSnippet(offer)}</code></pre></div>
+        <div className="api-parameter-grid"><div><strong>认证</strong><span>Authorization: Bearer &lt;MOYUSI_KEY&gt;</span></div><div><strong>模型</strong><span>{offer.modelId}</span></div><div><strong>流式</strong><span>{offer.modality === "语言" ? "支持 SSE" : "按任务状态查询"}</span></div><div><strong>工具</strong><span>{offer.tags.includes("工具调用") ? "支持函数 / MCP 适配" : "以模型能力为准"}</span></div></div>
+      </section>}
 
       <section className="access-principle">
         <strong>你只需做选择</strong>
@@ -407,6 +442,20 @@ function ModelDetail({ offer, onBack, onChooseSource }: { offer: ModelOffer; onB
       </details>
     </>
   );
+}
+
+function apiSnippet(offer: ModelOffer): string {
+  const endpoint = offer.protocol.includes("Anthropic") ? "/v1/messages" : "/v1/chat/completions";
+  return [
+    `curl https://api.moyusi.com${endpoint} \\`,
+    `  -H "Authorization: Bearer $MOYUSI_API_KEY" \\`,
+    `  -H "Content-Type: application/json" \\`,
+    "  -d '{",
+    `    \"model\": \"${offer.modelId}\",`,
+    '    "messages": [{"role": "user", "content": "Hello"}],',
+    '    "stream": true',
+    "  }'",
+  ].join("\n");
 }
 
 function AccessDialog({ selection, onClose, onContinue }: { selection: AccessSelection; onClose: () => void; onContinue: () => void }) {
