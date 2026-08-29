@@ -150,11 +150,12 @@ export function ModelSquare({ onOpenDetail }: { onOpenDetail: (modelId: string) 
           })}
         </div>
         <div className="control-divider" />
-        <div className="filter-tabs" aria-label="按开放性筛选模型">
-          {(["全部供给", "闭源 API", "开放权重"] as Filter[]).map((item) => (
-            <button key={item} type="button" data-active={filter === item} onClick={() => setFilter(item)}>{item}</button>
-          ))}
-        </div>
+        <label className="kind-select">
+          <span>供给类型</span>
+          <select aria-label="按开放性筛选模型" value={filter} onChange={(event) => setFilter(event.target.value as Filter)}>
+            {(["全部供给", "闭源 API", "开放权重"] as Filter[]).map((item) => <option key={item} value={item}>{item}</option>)}
+          </select>
+        </label>
         <div className="control-divider" />
         <button className="precision-trigger" type="button" aria-expanded={showPrecision} onClick={() => setShowPrecision((current) => !current)}>
           <SlidersHorizontal size={14} aria-hidden="true" />
