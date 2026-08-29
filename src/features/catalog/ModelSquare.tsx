@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from "react";
 import {
   ArrowLeft,
   Check,
-  ChevronDown,
   ChevronRight,
   Code2,
   Cpu,
@@ -21,6 +20,7 @@ import {
   WalletCards,
   X,
 } from "lucide-react";
+import { SelectMenu } from "../../components/SelectMenu";
 import {
   type ModelKind,
   type ModelModality,
@@ -99,6 +99,12 @@ const SORT_OPTIONS: Array<{ id: CatalogSort; label: string }> = [
   { id: "price", label: "最低起价" },
   { id: "latency", label: "最快响应" },
   { id: "context", label: "最大上下文" },
+];
+
+const SUPPLY_OPTIONS = [
+  { value: "全部供给", label: "不限" },
+  { value: "闭源 API", label: "闭源 API" },
+  { value: "开放权重", label: "开放权重" },
 ];
 
 function toggleValue<T>(values: T[], value: T): T[] {
@@ -195,19 +201,13 @@ export function ModelSquare({ onOpenDetail }: { onOpenDetail: (modelId: string) 
         </div>
         <div className="market-control-row">
           <div className="primary-filter-bar" aria-label="常用筛选">
-            <label className="filter-select"><span>开放性</span><select aria-label="供给类型" value={filter} onChange={(event) => setFilter(event.target.value as Filter)}><option value="全部供给">不限</option><option value="闭源 API">闭源 API</option><option value="开放权重">开放权重</option></select><ChevronDown className="select-chevron" size={12} /></label>
-            <label className="filter-select"><span>供应商</span><select aria-label="供应商" value={provider} onChange={(event) => setProvider(event.target.value)}>{providers.map((item) => <option key={item} value={item}>{item}</option>)}</select><ChevronDown className="select-chevron" size={12} /></label>
-            <label className="filter-select"><span>计费</span><select aria-label="定价方式" value={billing} onChange={(event) => setBilling(event.target.value as BillingFilter)}><option value="全部定价">全部</option>{BILLING_FILTERS.map((item) => <option key={item} value={item}>{item}</option>)}</select><ChevronDown className="select-chevron" size={12} /></label>
+            <SelectMenu className="filter-select" label="开放性" ariaLabel="供给类型" value={filter} options={SUPPLY_OPTIONS} onChange={(value) => setFilter(value as Filter)} />
+            <SelectMenu className="filter-select" label="供应商" ariaLabel="供应商" value={provider} options={providers.map((item) => ({ value: item, label: item }))} onChange={setProvider} />
+            <SelectMenu className="filter-select" label="计费" ariaLabel="定价方式" value={billing} options={[{ value: "全部定价", label: "全部" }, ...BILLING_FILTERS.map((item) => ({ value: item, label: item }))]} onChange={(value) => setBilling(value as BillingFilter)} />
             <button className="precision-trigger" type="button" aria-expanded={showPrecision} onClick={() => setShowPrecision((current) => !current)}><SlidersHorizontal size={13} />能力与性能{precisionCount > 0 && <b>{precisionCount}</b>}</button>
           </div>
           <div className="result-tools">
-            <label className="catalog-sort">
-              <span>排序</span>
-              <select aria-label="模型排序" value={sort} onChange={(event) => setSort(event.target.value as CatalogSort)}>
-                {SORT_OPTIONS.filter((option) => modality === "语言" || option.id !== "context").map((option) => <option key={option.id} value={option.id}>{option.label}</option>)}
-              </select>
-              <ChevronDown className="select-chevron" size={12} />
-            </label>
+            <SelectMenu className="catalog-sort" label="排序" ariaLabel="模型排序" align="end" value={sort} options={SORT_OPTIONS.filter((option) => modality === "语言" || option.id !== "context").map((option) => ({ value: option.id, label: option.label }))} onChange={(value) => setSort(value as CatalogSort)} />
             <div className="view-switch" aria-label="切换模型呈现方式">
               {VIEWS.map(({ id, label, Icon }) => (
                 <button key={id} type="button" aria-label={label} title={label} data-active={view === id} onClick={() => setView(id)}><Icon size={14} /><span>{label}</span></button>
@@ -253,8 +253,8 @@ function AdvancedFilterPanel({ modality, precision, setPrecision, onReset }: {
         {ACCESS_MODE_FILTERS.map((item) => <FacetButton key={item.value} active={precision.offerTypes.includes(item.value)} onClick={() => setPrecision((current) => ({ ...current, offerTypes: toggleValue(current.offerTypes, item.value) }))}>{item.label}</FacetButton>)}
       </FilterSection>
       <FilterSection title="性能与兼容">
-        {modality === "语言" && <label className="facet-select"><span>上下文</span><select aria-label="最小上下文" value={precision.minContextWindow ?? ""} onChange={(event) => setPrecision((current) => ({ ...current, minContextWindow: event.target.value ? Number(event.target.value) : undefined }))}>{CONTEXT_FILTERS.map((option) => <option key={option.label} value={option.value ?? ""}>{option.label}</option>)}</select><ChevronDown className="select-chevron" size={12} /></label>}
-        <label className="facet-select"><span>{modality === "视频" ? "排队" : "响应"}</span><select aria-label="响应上限" value={precision.maxLatencySeconds ?? ""} onChange={(event) => setPrecision((current) => ({ ...current, maxLatencySeconds: event.target.value ? Number(event.target.value) : undefined }))}>{LATENCY_FILTERS[modality].map((option) => <option key={option.label} value={option.value ?? ""}>{option.label}</option>)}</select><ChevronDown className="select-chevron" size={12} /></label>
+        {modality === "语言" && <SelectMenu className="facet-select" label="上下文" ariaLabel="最小上下文" value={String(precision.minContextWindow ?? "")} options={CONTEXT_FILTERS.map((option) => ({ value: String(option.value ?? ""), label: option.label }))} onChange={(value) => setPrecision((current) => ({ ...current, minContextWindow: value ? Number(value) : undefined }))} />}
+        <SelectMenu className="facet-select" label={modality === "视频" ? "排队" : "响应"} ariaLabel="响应上限" value={String(precision.maxLatencySeconds ?? "")} options={LATENCY_FILTERS[modality].map((option) => ({ value: String(option.value ?? ""), label: option.label }))} onChange={(value) => setPrecision((current) => ({ ...current, maxLatencySeconds: value ? Number(value) : undefined }))} />
         {PROTOCOL_FILTERS.map((protocol) => <FacetButton key={protocol} active={precision.protocol === protocol} onClick={() => setPrecision((current) => ({ ...current, protocol: current.protocol === protocol ? undefined : protocol }))}>{protocol}</FacetButton>)}
         {REGION_FILTERS.map((region) => <FacetButton key={region} active={precision.regions.includes(region)} onClick={() => setPrecision((current) => ({ ...current, regions: toggleValue(current.regions, region) }))}>{region}</FacetButton>)}
       </FilterSection>
