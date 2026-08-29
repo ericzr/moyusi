@@ -85,6 +85,17 @@
 .pending-offer p { margin: 3px 0 0; color: var(--text-faint); font-size: 8px; }
 .pending-offer button { min-height: 31px; padding: 0 10px; border: 1px solid var(--primary); border-radius: 6px; background: var(--primary); color: var(--on-primary); font-size: 9px; font-weight: 650; }
 .pending-offer button:disabled { cursor: wait; opacity: .68; }
+.access-setup-dialog { width: min(540px, 100%); }
+.access-setup-dialog .byok-provider-field input { width: 100%; height: 34px; padding: 0 9px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); color: var(--text); font-size: 9px; }
+.access-setup-dialog .byok-provider-field input:focus { border-color: var(--line-strong); outline: 0; }
+.access-setup-dialog .byok-provider-field small { color: var(--text-faint); font-size: 8px; line-height: 1.45; }
+.access-setup-steps { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); margin-top: 12px; border-top: 1px solid var(--line); border-left: 1px solid var(--line); }
+.access-setup-steps span { min-height: 54px; display: flex; flex-direction: column; justify-content: center; gap: 5px; padding: 9px 10px; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); color: var(--text-muted); font-size: 8px; }
+.access-setup-steps b { color: var(--brand-red); font: 650 7px/1 ui-monospace, SFMono-Regular, Menlo, monospace; }
+.access-setup-dialog .access-status[data-tone="warning"] > svg { color: var(--warn); }
+.access-setup-dialog .access-status[data-tone="error"] { border-color: color-mix(in srgb, var(--warn) 42%, var(--line)); }
+.access-setup-dialog .access-status[data-tone="error"] > svg { color: var(--warn); }
+.access-setup-dialog button:disabled, .access-setup-dialog input:disabled, .access-setup-dialog select:disabled { cursor: wait; opacity: .65; }
 .workspace-advanced { margin-top: 14px; border-top: 1px solid var(--line); }
 .workspace-advanced > summary { padding: 13px 2px; color: var(--text-muted); font-size: 9px; cursor: pointer; }
 .workspace-advanced > .two-column-panels { margin-top: 4px; }
@@ -189,6 +200,8 @@
 .deployment-row > div strong { font-size: 10px; }
 .deployment-row > div small, .deployment-row > span { margin-top: 4px; color: var(--text-faint); font-size: 8px; }
 .deployment-state { display: inline-flex; align-items: center; gap: 6px; color: var(--ok) !important; font: 650 8px/1 ui-monospace, SFMono-Regular, Menlo, monospace; }
+.deployment-state[data-state="PROVISIONING"] { color: var(--warn) !important; }
+.deployment-state[data-state="PROVISIONING"] i { background: var(--warn); }
 .deployment-row button { min-height: 31px; padding: 0 10px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); font-size: 9px; font-weight: 650; }
 .deployment-boundary { margin-top: 18px; }
 .identity-code { margin-top: 14px; padding: 14px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); }
@@ -284,6 +297,8 @@
   .workspace-sidebar nav button { width: auto; min-width: max-content; grid-template-columns: auto auto auto; padding: 0 10px; }
   .workspace-content { padding: 36px 15px 80px; }
   .workspace-page-head { min-height: 0; align-items: flex-start; flex-direction: column; }
+  .pending-offer { grid-template-columns: auto 1fr; }
+  .pending-offer button { grid-column: 2; justify-self: start; }
   .two-column-panels, .source-grid { grid-template-columns: 1fr; }
   .provider-source-list { grid-template-columns: 1fr; }
   .provider-table-head, .provider-source-row { min-width: 680px; }
@@ -303,6 +318,7 @@
   .migration-table-head, .migration-row { grid-template-columns: 1fr auto; }
   .migration-table-head span:last-child, .migration-row p { display: none; }
   .byok-steps { grid-template-columns: 1fr; }
+  .access-setup-steps { grid-template-columns: 1fr; }
   .strategy-bar { align-items: stretch; flex-direction: column; gap: 8px; }
   .strategy-bar select { width: 100%; }
   .next-step { align-items: stretch; flex-direction: column; gap: 12px; }

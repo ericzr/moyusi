@@ -6,6 +6,7 @@ import { ModelDetailPage, ModelSquare } from "../features/catalog/ModelSquare";
 import { Workspace } from "../features/workspace/Workspace";
 import { useDemoPlatform, type DemoPlatformController } from "../features/workspace/useDemoPlatform";
 import { catalogRepository } from "../services/catalogRepository";
+import { controlPlaneRepository } from "../services/controlPlaneRepository";
 import { workspaceSelectionPath } from "./selectionUrl";
 
 export type Theme = "light" | "dark";
@@ -98,9 +99,12 @@ function WorkspaceRoute({ platform }: { platform: DemoPlatformController }) {
       pendingSelection={activeSelection}
       platform={platform}
       onActivateSelection={async (selection) => {
+        const result = controlPlaneRepository.execute({ kind: "save-route", projectId: "project_default", routeProfileId: "route-codex", modelId: selection.offer.id, sourceIds: [`${selection.offer.id}:${selection.source.name}`], strategy: platform.state.routePolicy.strategy }, { desktopConnected: platform.state.desktop.status === "connected" && platform.state.desktop.localRouter === "ready" });
+        if (result.status !== "succeeded") throw new Error(result.error?.message ?? "路由没有保存");
         await platform.activate(selection);
         navigate("/workspace/routing", { replace: true });
       }}
+      onClearPendingSelection={() => navigate(`/workspace/${section}`, { replace: true })}
       onNavigate={(nextSection) => navigate(`/workspace/${nextSection}${selectionSection === nextSection ? location.search : ""}`)}
       onBrowseModels={() => navigate("/market")}
     />

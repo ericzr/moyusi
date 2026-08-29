@@ -14,6 +14,7 @@
 - `ControlPlaneSnapshot`：默认项目、来源授权、脱敏调用 Key、Desktop 设备、费用和 Workspace 资产的只读投影。
 - 控制面命令合同：连接来源、创建调用 Key、保存路由、测试端点、创建迁移计划均返回可轮询的 operation 状态。
 - 控制面 mock command executor 已完成：支持项目校验、来源校验、空权限校验和 Desktop 离线阻断，并将成功/失败结果写入可替换的 operation store。
+- 五类供给接入切片：BYOK 本机授权、自有端点探测、专属算力预算确认与 `DeploymentOrder` 已接入工作台；路由保存统一经过 command executor。
 
 ## 下一批：控制面命令与发布状态（P0）
 

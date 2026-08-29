@@ -37,12 +37,22 @@ export type CreateMigrationPlanCommand = {
   target: "Codex" | "Claude Code" | "Gemini CLI";
 };
 
+export type CreateDeploymentOrderCommand = {
+  kind: "create-deployment-order";
+  projectId: string;
+  modelId: string;
+  sourceName: string;
+  rateLabel: string;
+  budgetLimitCny: number;
+};
+
 export type ControlPlaneCommand =
   | ConnectSourceCommand
   | CreateApiCredentialCommand
   | SaveRouteCommand
   | TestEndpointCommand
-  | CreateMigrationPlanCommand;
+  | CreateMigrationPlanCommand
+  | CreateDeploymentOrderCommand;
 
 export type OperationError = {
   code: string;

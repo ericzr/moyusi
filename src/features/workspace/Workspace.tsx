@@ -33,6 +33,7 @@ import type { ActiveRoute, DesktopConnection, RoutePolicy, RouteStrategy, UsageE
 import type { ByokProvider, MigrationOutcome, MigrationTarget } from "../../domain/portableWorkspace";
 import { providerModeLabel, providerStatusLabel, providerStatusTone, type ProviderProfile, type ProviderSource } from "../../domain/provider";
 import { catalogRepository } from "../../services/catalogRepository";
+import { controlPlaneRepository } from "../../services/controlPlaneRepository";
 import { workspaceRepository } from "../../services/workspaceRepository";
 import type { DemoPlatformController } from "./useDemoPlatform";
 import { useDemoPortableWorkspace, type DemoPortableWorkspaceController } from "./useDemoPortableWorkspace";
@@ -67,6 +68,7 @@ export function Workspace({
   pendingSelection,
   platform,
   onActivateSelection,
+  onClearPendingSelection,
   onNavigate,
   onBrowseModels,
 }: {
@@ -74,11 +76,13 @@ export function Workspace({
   pendingSelection: CatalogSelection | null;
   platform: DemoPlatformController;
   onActivateSelection: (selection: CatalogSelection) => Promise<void>;
+  onClearPendingSelection: () => void;
   onNavigate: (section: WorkspaceSection) => void;
   onBrowseModels: () => void;
 }) {
   const [notice, setNotice] = useState<string | null>(null);
   const [profiles, setProfiles] = useState<ProviderProfile[]>(readProviderProfiles);
+  const [provisioningDeployment, setProvisioningDeployment] = useState<{ selection: CatalogSelection; budgetLimitCny: number } | null>(null);
   const portableWorkspace = useDemoPortableWorkspace();
   const summaryResource = useWorkspaceSummary(platform.state);
   const summary = summaryResource.data;
@@ -128,11 +132,11 @@ export function Workspace({
       </aside>
 
       <section className="workspace-content">
-        {pendingSelection && <PendingSelection selection={pendingSelection} onActivate={onActivateSelection} onAction={act} />}
+        {pendingSelection && <PendingSelection selection={pendingSelection} desktop={desktop} onActivate={onActivateSelection} onProvision={(selection, budgetLimitCny) => { setProvisioningDeployment({ selection, budgetLimitCny }); onClearPendingSelection(); }} onAction={act} />}
         {section === "overview" && <Overview activeRoute={platform.state.activeRoute} periodCost={platform.billing.periodCostCny} requestCount={platform.billing.requestCount} routePolicy={platform.state.routePolicy} connectedTools={summary?.activeTools ?? platform.state.connectedTools} pendingAttention={summary?.pendingAttention ?? 2} desktop={desktop} onNavigate={onNavigate} onSimulateCall={platform.simulateCall} onAction={act} />}
         {section === "routing" && <Routing activeRoute={platform.state.activeRoute} previousRoute={platform.state.previousRoute} routePolicy={platform.state.routePolicy} desktop={desktop} onBrowseModels={onBrowseModels} onSimulateCall={platform.simulateCall} onRestore={platform.restore} onUpdatePolicy={platform.updateRoutePolicy} onAction={act} />}
         {section === "sources" && <Sources workspace={portableWorkspace} profiles={profiles} onUpdateProfile={updateProfile} onAction={act} />}
-        {section === "deployments" && <Deployments onBrowseModels={onBrowseModels} onAction={act} />}
+        {section === "deployments" && <Deployments provisioning={provisioningDeployment} onBrowseModels={onBrowseModels} onAction={act} />}
         {section === "tools" && <Tools desktop={desktop} connectedTools={summary?.activeTools ?? platform.state.connectedTools} onAction={act} />}
         {section === "environment" && <Environment workspace={portableWorkspace} onAction={act} />}
         {section === "sessions" && <Sessions onAction={act} />}
@@ -146,14 +150,15 @@ export function Workspace({
   );
 }
 
-function PendingSelection({ selection, onActivate, onAction }: { selection: CatalogSelection; onActivate: (selection: CatalogSelection) => Promise<void>; onAction: (message: string) => void }) {
+function PendingSelection({ selection, desktop, onActivate, onProvision, onAction }: { selection: CatalogSelection; desktop: DesktopConnection; onActivate: (selection: CatalogSelection) => Promise<void>; onProvision: (selection: CatalogSelection, budgetLimitCny: number) => void; onAction: (message: string) => void }) {
   const flow = getAccessFlow(selection.source.mode);
   const [working, setWorking] = useState(false);
+  const [setupOpen, setSetupOpen] = useState(false);
   const actionLabel = flow.actionKind === "credential" ? "连接并使用" : flow.actionKind === "endpoint" ? "连接并使用" : flow.actionKind === "budget" ? "查看费用" : "一键切换";
 
   async function handleAction() {
     if (flow.actionKind !== "route") {
-      onAction(`${actionLabel}流程将在下一条开发切片接入，目前未执行真实操作`);
+      setSetupOpen(true);
       return;
     }
     setWorking(true);
@@ -167,13 +172,84 @@ function PendingSelection({ selection, onActivate, onAction }: { selection: Cata
   }
 
   return (
-    <div className="pending-offer" role="status">
-      <span className="pending-icon"><Box size={17} /></span>
-      <div>
-        <strong>{selection.offer.name} · {selection.source.name}</strong>
-        <p>{selection.source.mode} · {selection.source.price} · {selection.source.latency} · 已保留你的选择</p>
+    <>
+      <div className="pending-offer" role="status">
+        <span className="pending-icon"><Box size={17} /></span>
+        <div>
+          <strong>{selection.offer.name} · {selection.source.name}</strong>
+          <p>{selection.source.mode} · {selection.source.price} · {selection.source.latency} · 已保留你的选择</p>
+        </div>
+        <button type="button" disabled={working} onClick={handleAction}>{working ? "正在检查并切换…" : actionLabel}</button>
       </div>
-      <button type="button" disabled={working} onClick={handleAction}>{working ? "正在检查并切换…" : actionLabel}</button>
+      {setupOpen && <AccessSetupDialog selection={selection} desktop={desktop} onClose={() => setSetupOpen(false)} onActivate={onActivate} onProvision={onProvision} onAction={onAction} />}
+    </>
+  );
+}
+
+function AccessSetupDialog({ selection, desktop, onClose, onActivate, onProvision, onAction }: { selection: CatalogSelection; desktop: DesktopConnection; onClose: () => void; onActivate: (selection: CatalogSelection) => Promise<void>; onProvision: (selection: CatalogSelection, budgetLimitCny: number) => void; onAction: (message: string) => void }) {
+  const flow = getAccessFlow(selection.source.mode);
+  const desktopReady = desktop.status === "connected" && desktop.localRouter === "ready";
+  const [endpointUrl, setEndpointUrl] = useState("");
+  const [budgetLimitCny, setBudgetLimitCny] = useState(300);
+  const [working, setWorking] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const FlowIcon = flow.actionKind === "credential" ? KeyRound : flow.actionKind === "endpoint" ? Server : Wallet;
+  const steps = flow.actionKind === "credential"
+    ? ["生成一次性授权", "Desktop 本机保存", "验证后自动切换"]
+    : flow.actionKind === "endpoint"
+      ? ["填写端点地址", "自动探测协议", "通过后加入路由"]
+      : ["确认费用上限", "创建专属实例", "就绪后加入路由"];
+
+  async function completeSetup() {
+    setError(null);
+    if (flow.actionKind === "endpoint" && !/^https?:\/\//i.test(endpointUrl.trim())) {
+      setError("请输入完整的 http:// 或 https:// 端点地址");
+      return;
+    }
+
+    setWorking(true);
+    try {
+      const context = { desktopConnected: desktopReady };
+      const sourceId = `${selection.offer.id}:${selection.source.name}`;
+      const result = flow.actionKind === "credential"
+        ? controlPlaneRepository.execute({ kind: "connect-source", projectId: "project_default", sourceId, authorizationMode: "byok" }, context)
+        : flow.actionKind === "endpoint"
+          ? controlPlaneRepository.execute({ kind: "test-endpoint", projectId: "project_default", sourceId, endpointRef: "desktop://pending-endpoint" }, context)
+          : controlPlaneRepository.execute({ kind: "create-deployment-order", projectId: "project_default", modelId: selection.offer.id, sourceName: selection.source.name, rateLabel: selection.source.price, budgetLimitCny }, context);
+
+      if (result.status !== "succeeded") throw new Error(result.error?.message ?? "操作没有完成");
+
+      if (flow.actionKind === "budget") {
+        onProvision(selection, budgetLimitCny);
+        onAction(`${selection.offer.name} 已进入创建队列，达到 ¥ ${budgetLimitCny} 上限会自动停止`);
+        onClose();
+        return;
+      }
+
+      await onActivate(selection);
+      onAction(flow.actionKind === "credential" ? "本机授权已完成，模型已加入当前路由" : "端点探测通过，模型已加入当前路由");
+    } catch (setupError) {
+      setError(setupError instanceof Error ? setupError.message : "操作没有完成，请重试");
+      setWorking(false);
+    }
+  }
+
+  return (
+    <div className="access-dialog-backdrop" role="presentation">
+      <section className="access-dialog access-setup-dialog" role="dialog" aria-modal="true" aria-labelledby="access-setup-title">
+        <header><div><span className="access-flow-icon"><FlowIcon size={17} /></span><div><h2 id="access-setup-title">{flow.title}</h2><p>{flow.description}</p></div></div><button type="button" aria-label="关闭" disabled={working} onClick={onClose}><X size={15} /></button></header>
+        <dl className="access-summary">
+          <div><dt>模型</dt><dd>{selection.offer.name}</dd></div>
+          <div><dt>来源</dt><dd>{selection.source.name}</dd></div>
+          <div><dt>结算</dt><dd>{selection.source.mode === "专属算力" ? "Moyusi 余额" : "外部结算"}</dd></div>
+          <div><dt>费用</dt><dd>{selection.source.price}</dd></div>
+        </dl>
+        {flow.actionKind === "endpoint" && <label className="byok-provider-field"><span>端点地址</span><input type="url" value={endpointUrl} disabled={working} placeholder="https://your-endpoint.example/v1" onChange={(event) => setEndpointUrl(event.target.value)} /><small>地址和认证信息只交给 Desktop；网页只接收探测结果。</small></label>}
+        {flow.actionKind === "budget" && <label className="byok-provider-field"><span>每月费用上限</span><select value={budgetLimitCny} disabled={working} onChange={(event) => setBudgetLimitCny(Number(event.target.value))}><option value={100}>¥ 100 / 月</option><option value={300}>¥ 300 / 月</option><option value={600}>¥ 600 / 月</option></select><small>按小时实际使用计费，达到上限后实例自动停止。</small></label>}
+        <div className="access-setup-steps">{steps.map((step, index) => <span key={step}><b>0{index + 1}</b>{step}</span>)}</div>
+        <div className="access-status" data-tone={error ? "error" : desktopReady || flow.actionKind === "budget" ? "ready" : "warning"}>{error ? <AlertCircle size={14} /> : <ShieldCheck size={14} />}<div><strong>{error ?? (flow.actionKind === "budget" ? "创建前确认预算，创建后才开始计费" : desktopReady ? "Moyusi Desktop 已连接" : "需要先连接 Moyusi Desktop")}</strong><p>{error ? "原配置没有改变，可以修正后重试。" : flow.note}</p></div></div>
+        <footer><button type="button" disabled={working} onClick={onClose}>稍后处理</button><button className="button button-primary" type="button" disabled={working} onClick={completeSetup}>{working ? "正在处理…" : flow.actionKind === "budget" ? "确认预算并创建" : flow.action}<ChevronRight size={13} /></button></footer>
+      </section>
     </div>
   );
 }
@@ -394,11 +470,12 @@ function ByokDialog({ provider, connecting, onProviderChange, onClose, onConnect
   );
 }
 
-function Deployments({ onBrowseModels, onAction }: { onBrowseModels: () => void; onAction: (message: string) => void }) {
+function Deployments({ provisioning, onBrowseModels, onAction }: { provisioning: { selection: CatalogSelection; budgetLimitCny: number } | null; onBrowseModels: () => void; onAction: (message: string) => void }) {
   return (
     <>
       <PageHead kicker="MODELS & DEPLOYMENTS" title="我的模型" description="查看已经使用的开放模型、专属服务器和自己的服务器。成本与运行状态分开显示。" action={<button className="button button-primary compact-button" type="button" onClick={onBrowseModels}>添加开放模型</button>} />
       <div className="deployment-list">
+        {provisioning && <Deployment icon={CloudCog} name={provisioning.selection.offer.name} type={provisioning.selection.source.name} state="PROVISIONING" details={[provisioning.selection.source.price, `上限 ¥ ${provisioning.budgetLimitCny} / 月`, "创建后开始计费"]} action="查看进度" onClick={() => onAction("正在分配算力；就绪前不会加入活动路由")} />}
         <Deployment icon={Server} name="Qwen Coder" type="共享端点" state="WARM" details={["FP8 · vLLM", "新加坡", "¥ 0.86 / M 起"]} action="查看" onClick={() => onAction("共享端点详情已打开")} />
         <Deployment icon={CloudCog} name="DeepSeek Reasoning" type="弹性共享" state="COLD" details={["BF16 · SGLang", "东京", "冷启动约 28 秒"]} action="启动" onClick={() => onAction("启动请求已进入演示队列")} />
         <Deployment icon={Database} name="Private Endpoint" type="用户自有端点" state="HEALTHY" details={["OpenAI-compatible", "私有网络", "外部计费"]} action="测试" onClick={() => onAction("端点协议与能力测试通过")} />
@@ -552,7 +629,7 @@ function Attention({ icon: Icon, title, description, action, onClick }: { icon: 
 function RouteOrder({ index, name, meta, health }: { index: string; name: string; meta: string; health: string }) { return <div className="route-order-row"><span className="route-index">{index}</span><div><strong>{name}</strong><small>{meta}</small></div><span className="route-health"><i />{health}</span><Settings2 size={14} /></div>; }
 function SettingRow({ label, value }: { label: string; value: string }) { return <div className="setting-row"><span>{label}</span><strong>{value}</strong></div>; }
 function SourceRow({ name, meta, status }: { name: string; meta: string; status: string }) { return <div className="source-row"><span className="source-icon"><PlugZap size={15} /></span><div><strong>{name}</strong><small>{meta}</small></div><span>{status}</span></div>; }
-function Deployment({ icon: Icon, name, type, state, details, action, onClick }: { icon: LucideIcon; name: string; type: string; state: string; details: string[]; action: string; onClick: () => void }) { return <article className="deployment-row"><span className="deployment-icon"><Icon size={18} /></span><div><strong>{name}</strong><small>{type}</small></div><span className="deployment-state"><i />{state}</span>{details.map((detail) => <span key={detail}>{detail}</span>)}<button type="button" onClick={onClick}>{action}</button></article>; }
+function Deployment({ icon: Icon, name, type, state, details, action, onClick }: { icon: LucideIcon; name: string; type: string; state: string; details: string[]; action: string; onClick: () => void }) { return <article className="deployment-row"><span className="deployment-icon"><Icon size={18} /></span><div><strong>{name}</strong><small>{type}</small></div><span className="deployment-state" data-state={state}><i />{state}</span>{details.map((detail) => <span key={detail}>{detail}</span>)}<button type="button" onClick={onClick}>{action}</button></article>; }
 function AssetRow({ icon: Icon, name, value, note }: { icon: LucideIcon; name: string; value: string; note: string }) { return <div className="asset-row"><span><Icon size={16} /></span><div><strong>{name}</strong><small>{note}</small></div><b>{value}</b><ChevronRight size={13} /></div>; }
 function MigrationTarget({ name, version, exact, adapted, unsupported, status }: { name: string; version: string; exact: string; adapted: string; unsupported: string; status: string }) { return <div className="migration-target"><div><strong>{name}</strong><small>{version}</small></div><dl><div><dt>原样</dt><dd>{exact}</dd></div><div><dt>转换</dt><dd>{adapted}</dd></div><div><dt>不支持</dt><dd>{unsupported}</dd></div></dl><span>{status}</span></div>; }
 function MigrationRow({ name, result, detail, warn = false }: { name: string; result: string; detail: string; warn?: boolean }) { return <div className="migration-row"><strong>{name}</strong><span data-warn={warn}>{result}</span><p>{detail}</p></div>; }

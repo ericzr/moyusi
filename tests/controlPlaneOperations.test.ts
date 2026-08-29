@@ -17,6 +17,15 @@ describe("control plane command execution", () => {
     const result = repository.execute({ kind: "save-route", projectId: "project_default", routeProfileId: "route-codex", modelId: "gpt-coding", sourceIds: ["moyusi-stable"], strategy: "auto" }, { desktopConnected: false }, "2026-08-29T10:00:00.000Z");
 
     expect(result).toMatchObject({ status: "failed", error: { code: "desktop_offline", retryable: true } });
+    expect(repository.execute({ kind: "connect-source", projectId: "project_default", sourceId: "anthropic-byok", authorizationMode: "byok" }, { desktopConnected: false }, "2026-08-29T10:01:00.000Z")).toMatchObject({ status: "failed", error: { code: "desktop_offline" } });
+  });
+
+  it("creates a dedicated compute order only after a budget is set", () => {
+    const repository = createControlPlaneRepository();
+    const result = repository.execute({ kind: "create-deployment-order", projectId: "project_default", modelId: "qwen-coder-open", sourceName: "专属 GPU 实例", rateLabel: "¥ 5.80 / h", budgetLimitCny: 300 }, {}, "2026-08-29T10:02:00.000Z");
+
+    expect(result).toMatchObject({ status: "succeeded", data: { deploymentId: "deployment_demo_next", status: "provisioning", budgetLimitCny: 300 } });
+    expect(repository.execute({ kind: "create-deployment-order", projectId: "project_default", modelId: "qwen-coder-open", sourceName: "专属 GPU 实例", rateLabel: "¥ 5.80 / h", budgetLimitCny: 0 }, {}, "2026-08-29T10:03:00.000Z").error?.code).toBe("budget_required");
   });
 
   it("rejects invalid commands before applying anything", () => {
