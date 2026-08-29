@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { createInitialDemoState } from "../src/domain/demoPlatform";
-import { getWorkspaceSummary, listCatalogModels } from "../src/services/mockApi";
+import { getCatalogModel, getWorkspaceSummary, listCatalogModels } from "../src/services/mockApi";
 
 describe("typed mock API boundary", () => {
   it("returns catalog data with a source and timestamp", async () => {
@@ -13,5 +13,11 @@ describe("typed mock API boundary", () => {
   it("returns a workbench summary from platform state", async () => {
     const result = await getWorkspaceSummary(createInitialDemoState());
     expect(result.data).toMatchObject({ activeModel: "GPT · Coding", activeSource: "Moyusi 稳定线路", routeStatus: "ready" });
+  });
+
+  it("keeps detail reads on the same catalog API boundary", async () => {
+    const result = await getCatalogModel("gpt-coding");
+    expect(result.data?.name).toBe("GPT · Coding");
+    expect(await getCatalogModel("missing-model")).toMatchObject({ data: null, source: "mock" });
   });
 });

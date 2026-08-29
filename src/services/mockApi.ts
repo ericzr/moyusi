@@ -22,6 +22,11 @@ export async function listCatalogModels(filter: CatalogFilter = {}): Promise<Api
   return response(catalogRepository.list(filter));
 }
 
+export async function getCatalogModel(modelId: string): Promise<ApiResponse<ModelOffer | null>> {
+  await delay(140);
+  return response(catalogRepository.getById(modelId));
+}
+
 export async function getWorkspaceSummary(state: DemoPlatformState): Promise<ApiResponse<WorkspaceSummary>> {
   await delay(120);
   return response(summarizeWorkspace(state));

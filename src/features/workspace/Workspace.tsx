@@ -27,10 +27,11 @@ import {
 } from "lucide-react";
 import { getAccessFlow, type WorkspaceSection } from "../../domain/accessPolicy";
 import type { CatalogSelection } from "../../domain/catalog";
-import type { ActiveRoute, RouteStrategy, UsageEvent } from "../../domain/demoPlatform";
+import type { ActiveRoute, DesktopConnection, RoutePolicy, RouteStrategy, UsageEvent } from "../../domain/demoPlatform";
 import type { ByokProvider, MigrationOutcome, MigrationTarget } from "../../domain/portableWorkspace";
 import type { DemoPlatformController } from "./useDemoPlatform";
 import { useDemoPortableWorkspace, type DemoPortableWorkspaceController } from "./useDemoPortableWorkspace";
+import { useWorkspaceSummary } from "./useWorkspaceSummary";
 import "./workspace.css";
 
 const NAV: { id: WorkspaceSection; label: string; icon: LucideIcon }[] = [
@@ -60,6 +61,9 @@ export function Workspace({
 }) {
   const [notice, setNotice] = useState<string | null>(null);
   const portableWorkspace = useDemoPortableWorkspace();
+  const summaryResource = useWorkspaceSummary(platform.state);
+  const summary = summaryResource.data;
+  const desktop = summary?.desktop ?? platform.state.desktop;
 
   function act(message: string) {
     setNotice(message);
@@ -82,15 +86,15 @@ export function Workspace({
           ))}
         </nav>
         <div className="sidebar-foot">
-          <span><i /> 一键切换已就绪</span>
-          <small>Moyusi Desktop · 本机</small>
+          <span><i data-state={desktop.status} /> {summaryResource.status === "loading" ? "正在同步工作台" : summaryResource.status === "error" ? "工作台数据需刷新" : desktopStatusLabel(desktop)}</span>
+          <small>{summary ? `${summary.activeTools.length} 个工具已连接 · ${desktop.name}` : `${desktop.name} · 本机`}</small>
         </div>
       </aside>
 
       <section className="workspace-content">
         {pendingSelection && <PendingSelection selection={pendingSelection} onActivate={onActivateSelection} onAction={act} />}
-        {section === "overview" && <Overview activeRoute={platform.state.activeRoute} periodCost={platform.billing.periodCostCny} requestCount={platform.billing.requestCount} routeStrategy={platform.state.routeStrategy} connectedTools={platform.state.connectedTools} onNavigate={onNavigate} />}
-        {section === "routing" && <Routing activeRoute={platform.state.activeRoute} previousRoute={platform.state.previousRoute} routeStrategy={platform.state.routeStrategy} onBrowseModels={onBrowseModels} onSimulateCall={platform.simulateCall} onRestore={platform.restore} onUpdateStrategy={platform.updateRouteStrategy} onAction={act} />}
+        {section === "overview" && <Overview activeRoute={platform.state.activeRoute} periodCost={platform.billing.periodCostCny} requestCount={platform.billing.requestCount} routePolicy={platform.state.routePolicy} connectedTools={summary?.activeTools ?? platform.state.connectedTools} pendingAttention={summary?.pendingAttention ?? 2} desktop={desktop} onNavigate={onNavigate} onSimulateCall={platform.simulateCall} onAction={act} />}
+        {section === "routing" && <Routing activeRoute={platform.state.activeRoute} previousRoute={platform.state.previousRoute} routePolicy={platform.state.routePolicy} desktop={desktop} onBrowseModels={onBrowseModels} onSimulateCall={platform.simulateCall} onRestore={platform.restore} onUpdatePolicy={platform.updateRoutePolicy} onAction={act} />}
         {section === "sources" && <Sources workspace={portableWorkspace} onAction={act} />}
         {section === "deployments" && <Deployments onBrowseModels={onBrowseModels} onAction={act} />}
         {section === "environment" && <Environment workspace={portableWorkspace} onAction={act} />}
@@ -144,16 +148,22 @@ function PageHead({ title, description, action }: { kicker: string; title: strin
   );
 }
 
-function Overview({ activeRoute, periodCost, requestCount, routeStrategy, connectedTools, onNavigate }: { activeRoute: ActiveRoute; periodCost: number; requestCount: number; routeStrategy: RouteStrategy; connectedTools: string[]; onNavigate: (section: WorkspaceSection) => void }) {
+function Overview({ activeRoute, periodCost, requestCount, routePolicy, connectedTools, pendingAttention, desktop, onNavigate, onSimulateCall, onAction }: { activeRoute: ActiveRoute; periodCost: number; requestCount: number; routePolicy: RoutePolicy; connectedTools: string[]; pendingAttention: number; desktop: DesktopConnection; onNavigate: (section: WorkspaceSection) => void; onSimulateCall: () => Promise<UsageEvent>; onAction: (message: string) => void }) {
   const activeTool = toolLabel(activeRoute);
+  const desktopReady = desktop.status === "connected" && desktop.localRouter === "ready";
   return (
     <>
-      <PageHead kicker="CONTROL PLANE" title="工作台" description="模型切换、AI 配置和费用都在这里。今天有 2 项需要确认。" action={<span className="workspace-ready"><i /> {routeStrategyLabel(routeStrategy)} · 运行正常</span>} />
+      <PageHead kicker="CONTROL PLANE" title="工作台" description={`模型切换、AI 配置和费用都在这里。今天有 ${pendingAttention} 项需要确认。`} action={<span className="workspace-ready" data-state={desktop.status}><i /> {desktopReady ? "Desktop 已连接" : desktopStatusLabel(desktop)}</span>} />
       <div className="workspace-stats">
         <Metric label="本期费用" value={`¥ ${periodCost.toFixed(2)}`} note="含本机演示调用" />
         <Metric label="今日请求" value={String(requestCount)} note="含本机演示调用" />
         <Metric label="活动模型" value="4" note="2 闭源 · 2 开放" />
         <Metric label="已连接工具" value={String(connectedTools.length)} note={connectedTools.join(" · ")} />
+      </div>
+
+      <div className="next-step">
+        <div><span>建议下一步</span><strong>{desktopReady ? "验证当前路由是否可用" : "先连接 Moyusi Desktop"}</strong><p>{desktopReady ? `${activeRoute.modelName} · ${activeRoute.sourceName} · ${routePolicy.fallback === "same-model" ? "同型号来源可自动回退" : "故障时暂停并提醒"}` : "网页负责选择与管理；本机工具的切换、密钥和配置迁移由 Desktop 完成。"}</p></div>
+        <div>{desktopReady ? <button className="button button-primary compact-button" type="button" onClick={() => onSimulateCall().then((event) => onAction(`${event.modelName} 调用成功 · ${event.costLabel}`)).catch(() => onAction("模拟调用失败，请检查当前来源"))}>测试一次调用</button> : <button className="button button-primary compact-button" type="button" onClick={() => onAction("请在本机打开 Moyusi Desktop 后重新连接；网页不会读取或保存密钥")}>了解连接方式</button>}<button className="button button-quiet compact-button" type="button" onClick={() => onNavigate("routing")}>查看路由</button></div>
       </div>
 
       <div className="overview-grid">
@@ -190,7 +200,7 @@ function Overview({ activeRoute, periodCost, requestCount, routeStrategy, connec
   );
 }
 
-function Routing({ activeRoute, previousRoute, routeStrategy, onBrowseModels, onSimulateCall, onRestore, onUpdateStrategy, onAction }: { activeRoute: ActiveRoute; previousRoute: ActiveRoute | null; routeStrategy: RouteStrategy; onBrowseModels: () => void; onSimulateCall: () => Promise<UsageEvent>; onRestore: () => void; onUpdateStrategy: (strategy: RouteStrategy) => void; onAction: (message: string) => void }) {
+function Routing({ activeRoute, previousRoute, routePolicy, desktop, onBrowseModels, onSimulateCall, onRestore, onUpdatePolicy, onAction }: { activeRoute: ActiveRoute; previousRoute: ActiveRoute | null; routePolicy: RoutePolicy; desktop: DesktopConnection; onBrowseModels: () => void; onSimulateCall: () => Promise<UsageEvent>; onRestore: () => void; onUpdatePolicy: (patch: Partial<Omit<RoutePolicy, "saveRequestBodies">>) => void; onAction: (message: string) => void }) {
   const [testing, setTesting] = useState(false);
   const fallbacks = [
     { name: "GPT · Coding", meta: "统一余额 · 稳定来源", health: "99.95%" },
@@ -220,11 +230,12 @@ function Routing({ activeRoute, previousRoute, routeStrategy, onBrowseModels, on
   return (
     <>
       <PageHead kicker="ROUTING" title="模型切换" description="选择使用场景和模型来源。切换前会先检查可用性，并保留原配置用于恢复。" action={<button className="button button-primary compact-button" type="button" onClick={onBrowseModels}>从广场选择模型</button>} />
+      <DesktopBridge desktop={desktop} />
       <Panel>
         <PanelHead eyebrow="PROVIDER PROFILE" title={`${toolLabel(activeRoute)} · 当前模型`} action={<span className="inline-status"><i />正在使用</span>} />
         <div className="strategy-bar">
-          <div><strong>路由策略</strong><small>{routeStrategyDescription(routeStrategy)}</small></div>
-          <label><span className="visually-hidden">选择路由策略</span><select value={routeStrategy} onChange={(event) => { onUpdateStrategy(event.target.value as RouteStrategy); onAction(`已切换为${routeStrategyLabel(event.target.value as RouteStrategy)}`); }}><option value="auto">自动选择</option><option value="fixed">固定当前来源</option><option value="cost">成本优先</option></select></label>
+          <div><strong>路由策略</strong><small>{routeStrategyDescription(routePolicy.strategy)}</small></div>
+          <label><span className="visually-hidden">选择路由策略</span><select value={routePolicy.strategy} onChange={(event) => { onUpdatePolicy({ strategy: event.target.value as RouteStrategy }); onAction(`已切换为${routeStrategyLabel(event.target.value as RouteStrategy)}`); }}><option value="auto">自动选择</option><option value="fixed">固定当前来源</option><option value="cost">成本优先</option></select></label>
         </div>
         <div className="route-order">
           <RouteOrder index="01" name={activeRoute.modelName} meta={`${activeRoute.sourceMode} · ${activeRoute.sourceName}`} health={activeRoute.health} />
@@ -235,11 +246,22 @@ function Routing({ activeRoute, previousRoute, routeStrategy, onBrowseModels, on
       <details className="workspace-advanced">
         <summary>高级设置</summary>
         <div className="two-column-panels">
-          <Panel><PanelHead eyebrow="LOCAL ROUTER" title="本地连接" /><SettingRow label="监听地址" value="127.0.0.1:16888" /><SettingRow label="可用性检查" value="每 30 秒" /><SettingRow label="修改保护" value="自动备份，可恢复" /></Panel>
-          <Panel><PanelHead eyebrow="POLICY" title="数据与切换规则" /><SettingRow label="优先地区" value="亚太" /><SettingRow label="保存请求正文" value="不保存" /><SettingRow label="切换到不同型号" value="不允许" /></Panel>
+          <Panel><PanelHead eyebrow="LOCAL ROUTER" title="本地连接" /><SettingRow label="Desktop 状态" value={desktopStatusLabel(desktop)} /><SettingRow label="本地路由" value={desktop.localRouter === "ready" ? "已就绪" : "未启动"} /><SettingRow label="修改保护" value="自动备份，可恢复" /></Panel>
+          <Panel><PanelHead eyebrow="POLICY" title="数据与切换规则" /><div className="policy-control"><span>优先地区</span><select value={routePolicy.preferredRegion} onChange={(event) => onUpdatePolicy({ preferredRegion: event.target.value as RoutePolicy["preferredRegion"] })}><option>中国</option><option>亚太</option><option>全球</option></select></div><div className="policy-control"><span>失败时处理</span><select value={routePolicy.fallback} onChange={(event) => onUpdatePolicy({ fallback: event.target.value as RoutePolicy["fallback"] })}><option value="same-model">同型号来源回退</option><option value="pause">暂停并提醒</option></select></div><SettingRow label="保存请求正文" value="不保存" /></Panel>
         </div>
       </details>
     </>
+  );
+}
+
+function DesktopBridge({ desktop }: { desktop: DesktopConnection }) {
+  const ready = desktop.status === "connected" && desktop.localRouter === "ready";
+  return (
+    <aside className="desktop-bridge" data-ready={ready}>
+      <SquareTerminal size={16} />
+      <div><strong>{ready ? "网页策略已由 Desktop 应用到本机工具" : "本机工具的切换需要 Moyusi Desktop"}</strong><p>{ready ? `${desktop.name} ${desktop.version ?? ""} · 本地路由已就绪。密钥、工具配置和回滚只在本机处理。` : "网页可以比较模型、管理费用和保存策略；Desktop 负责本机密钥、路由和配置迁移。"}</p></div>
+      <span><i data-state={desktop.status} />{desktopStatusLabel(desktop)}</span>
+    </aside>
   );
 }
 
@@ -402,6 +424,7 @@ function MigrationTarget({ name, version, exact, adapted, unsupported, status }:
 function MigrationRow({ name, result, detail, warn = false }: { name: string; result: string; detail: string; warn?: boolean }) { return <div className="migration-row"><strong>{name}</strong><span data-warn={warn}>{result}</span><p>{detail}</p></div>; }
 function UsageRow({ id, model, route, tokens, latency, cost }: { id: string; model: string; route: string; tokens: string; latency: string; cost: string }) { return <div className="usage-row"><code>{id}</code><div><strong>{model}</strong><small>{route}</small></div><code>{tokens}</code><code>{latency}</code><code>{cost}</code></div>; }
 function toolLabel(route: ActiveRoute): string { return route.modality === "语言" ? "Codex" : route.modality === "图片" ? "图像工作流" : "视频工作流"; }
+function desktopStatusLabel(desktop: DesktopConnection): string { return desktop.status === "connected" && desktop.localRouter === "ready" ? "本机已连接" : desktop.status === "not-installed" ? "未安装 Desktop" : "Desktop 离线"; }
 function routeStrategyLabel(strategy: RouteStrategy): string { return strategy === "fixed" ? "固定来源" : strategy === "cost" ? "成本优先" : "自动选择"; }
 function routeStrategyDescription(strategy: RouteStrategy): string { return strategy === "fixed" ? "只使用当前来源，故障时暂停并提醒" : strategy === "cost" ? "在可用来源中优先选择成本较低的线路" : "按健康、延迟与价格自动选择并回退"; }
 function migrationOutcomeLabel(outcome: MigrationOutcome): string { return outcome === "exact" ? "原样" : outcome === "adapted" ? "已转换" : outcome === "rebuilt" ? "已重建" : "待确认"; }

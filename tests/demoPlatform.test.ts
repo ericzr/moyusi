@@ -56,7 +56,7 @@ describe("demo platform vertical slice", () => {
   it("persists an explicit routing strategy without changing the active route", () => {
     const initial = createInitialDemoState();
     const updated = setRouteStrategy(initial, "cost");
-    expect(updated.routeStrategy).toBe("cost");
+    expect(updated.routePolicy.strategy).toBe("cost");
     expect(updated.activeRoute).toEqual(initial.activeRoute);
     expect(setRouteStrategy(updated, "cost")).toBe(updated);
   });
@@ -65,5 +65,12 @@ describe("demo platform vertical slice", () => {
     const summary = summarizeWorkspace(createInitialDemoState());
     expect(summary).toMatchObject({ routeStatus: "ready", activeModel: "GPT · Coding", activeSource: "Moyusi 稳定线路", pendingAttention: 2 });
     expect(summary.activeTools).toEqual(["Codex", "Claude Code"]);
+    expect(summary.desktop).toMatchObject({ status: "connected", localRouter: "ready", name: "Moyusi Desktop" });
+  });
+
+  it("adds one attention item when the desktop bridge is offline", () => {
+    const state = createInitialDemoState();
+    const summary = summarizeWorkspace({ ...state, desktop: { ...state.desktop, status: "offline", localRouter: "stopped" } });
+    expect(summary.pendingAttention).toBe(3);
   });
 });

@@ -6,6 +6,7 @@ import {
   isDemoPlatformState,
   recordMockUsage,
   restorePreviousRoute,
+  setRoutePolicy,
   setRouteStrategy,
   summarizeBilling,
   type DemoPlatformState,
@@ -44,8 +45,12 @@ export function useDemoPlatform() {
     commit(restorePreviousRoute);
   }
 
-  function updateRouteStrategy(strategy: DemoPlatformState["routeStrategy"]): void {
+  function updateRouteStrategy(strategy: DemoPlatformState["routePolicy"]["strategy"]): void {
     commit((current) => setRouteStrategy(current, strategy));
+  }
+
+  function updateRoutePolicy(patch: Parameters<typeof setRoutePolicy>[1]): void {
+    commit((current) => setRoutePolicy(current, patch));
   }
 
   function commit(update: (current: DemoPlatformState) => DemoPlatformState): void {
@@ -54,7 +59,7 @@ export function useDemoPlatform() {
     setState(next);
   }
 
-  return { state, billing, activate, simulateCall, restore, updateRouteStrategy };
+  return { state, billing, activate, simulateCall, restore, updateRouteStrategy, updateRoutePolicy };
 }
 
 export type DemoPlatformController = ReturnType<typeof useDemoPlatform>;
@@ -65,10 +70,12 @@ function readLocalState(): DemoPlatformState {
     if (!saved) return createInitialDemoState();
     const parsed: unknown = JSON.parse(saved);
     if (!isDemoPlatformState(parsed)) return createInitialDemoState();
-    return {
+    const legacy = parsed as DemoPlatformState & { routeStrategy?: DemoPlatformState["routePolicy"]["strategy"] };
+  return {
       ...parsed,
-      routeStrategy: parsed.routeStrategy ?? "auto",
+      routePolicy: parsed.routePolicy ?? { strategy: legacy.routeStrategy ?? "auto", preferredRegion: "亚太", fallback: "same-model", saveRequestBodies: false },
       connectedTools: parsed.connectedTools ?? ["Codex", "Claude Code"],
+      desktop: parsed.desktop ?? createInitialDemoState().desktop,
     };
   } catch {
     return createInitialDemoState();

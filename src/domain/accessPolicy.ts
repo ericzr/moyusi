@@ -73,8 +73,8 @@ export function getAccessFlow(mode: OfferType): AccessFlow {
   return {
     title: "一键切换到这个来源",
     description: "切换本身不收费，开始使用后才按实际用量从 Moyusi 余额扣费。",
-    status: "余额可用 · ¥ 86.40",
-    note: "如果余额不足，会先引导充值；完成后自动回到这里，不会丢失选择。",
+    status: "使用 Moyusi 余额结算",
+    note: "切换前会检查当前余额；余额不足时会先引导充值，完成后自动回到这里。",
     action: "一键切换",
     targetSection: "routing",
     actionKind: "route",

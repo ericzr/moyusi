@@ -32,7 +32,8 @@ import {
 } from "../../domain/catalog";
 import { getAccessFlow, sourceActionLabel } from "../../domain/accessPolicy";
 import { catalogRepository } from "../../services/catalogRepository";
-import { listCatalogModels } from "../../services/mockApi";
+import { useCatalogModels } from "./useCatalogModels";
+import { useCatalogModel } from "./useCatalogModel";
 
 type Filter = "全部供给" | ModelKind;
 type ViewMode = "compact" | "cards";
@@ -112,22 +113,9 @@ export function ModelSquare({ onOpenDetail }: { onOpenDetail: (modelId: string) 
       protocol: precision.protocol,
       sort,
   }), [filter, modality, precision, query, sort]);
-  const [offers, setOffers] = useState<ModelOffer[]>(() => catalogRepository.list(catalogFilter));
-  const [catalogState, setCatalogState] = useState<"ready" | "loading" | "error">("ready");
-
-  useEffect(() => {
-    let cancelled = false;
-    setCatalogState("loading");
-    listCatalogModels(catalogFilter).then((response) => {
-      if (cancelled) return;
-      setOffers(response.data);
-      setCatalogState("ready");
-    }).catch(() => {
-      if (cancelled) return;
-      setCatalogState("error");
-    });
-    return () => { cancelled = true; };
-  }, [catalogFilter]);
+  const catalogResource = useCatalogModels(catalogFilter);
+  const offers = catalogResource.data ?? [];
+  const catalogState = catalogResource.status;
 
   const sourceCount = offers.reduce((total, offer) => total + offer.sources.length, 0);
 
@@ -215,8 +203,8 @@ export function ModelSquare({ onOpenDetail }: { onOpenDetail: (modelId: string) 
       <section className="catalog-section">
         <div className="catalog-meta"><span>{offers.length} 个模型 · {sourceCount} 个可切换来源</span><span>{catalogState === "loading" ? "正在更新目录…" : catalogState === "error" ? "目录更新失败，显示上次结果" : "价格、延迟与状态为演示数据"}</span></div>
         <div className="catalog-layout">
-          {view === "compact" && <CompactResults offers={offers} onOpenDetail={(offer) => onOpenDetail(offer.id)} />}
-          {view === "cards" && <CardResults offers={offers} onOpenDetail={(offer) => onOpenDetail(offer.id)} />}
+          {view === "compact" && <CompactResults offers={offers} onOpenDetail={(offer) => onOpenDetail(offer.id)} onReset={resetPrecision} />}
+          {view === "cards" && <CardResults offers={offers} onOpenDetail={(offer) => onOpenDetail(offer.id)} onReset={resetPrecision} />}
         </div>
       </section>
     </main>
@@ -240,13 +228,23 @@ export function ModelDetailPage({
   onBack: () => void;
   onOpenWorkspace: (selection: CatalogSelection) => void;
 }) {
-  const offer = catalogRepository.getById(modelId);
+  const offerResource = useCatalogModel(modelId);
+  const offer = offerResource.data;
   const [access, setAccess] = useState<AccessSelection | null>(null);
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: "auto" });
     setAccess(null);
   }, [modelId]);
+
+  if (!offer && offerResource.status === "loading") {
+    return (
+      <main className="market-page model-detail-page">
+        <nav className="detail-nav" aria-label="模型详情导航"><button type="button" onClick={onBack}><ArrowLeft size={14} />返回模型广场</button></nav>
+        <div className="catalog-empty">正在加载模型信息…</div>
+      </main>
+    );
+  }
 
   if (!offer) {
     return (
@@ -265,7 +263,7 @@ export function ModelDetailPage({
   );
 }
 
-function CompactResults({ offers, onOpenDetail }: { offers: ModelOffer[]; onOpenDetail: (offer: ModelOffer) => void }) {
+function CompactResults({ offers, onOpenDetail, onReset }: { offers: ModelOffer[]; onOpenDetail: (offer: ModelOffer) => void; onReset: () => void }) {
   return (
     <div className="catalog-results">
       <div className="result-header" aria-hidden="true"><span>模型</span><span>适合</span><span>来源</span><span>起始价格</span><span>响应 / 排队</span><span>稳定性</span><span>操作</span></div>
@@ -284,14 +282,14 @@ function CompactResults({ offers, onOpenDetail }: { offers: ModelOffer[]; onOpen
             <button className="row-action" type="button" onClick={() => onOpenDetail(offer)}>查看<ChevronRight size={12} /></button>
           </article>
         ))}
-        {offers.length === 0 && <EmptyResults />}
+        {offers.length === 0 && <EmptyResults onReset={onReset} />}
       </div>
     </div>
   );
 }
 
-function CardResults({ offers, onOpenDetail }: { offers: ModelOffer[]; onOpenDetail: (offer: ModelOffer) => void }) {
-  if (offers.length === 0) return <div className="catalog-results"><EmptyResults /></div>;
+function CardResults({ offers, onOpenDetail, onReset }: { offers: ModelOffer[]; onOpenDetail: (offer: ModelOffer) => void; onReset: () => void }) {
+  if (offers.length === 0) return <div className="catalog-results"><EmptyResults onReset={onReset} /></div>;
   return (
     <div className="model-card-grid">
       {offers.map((offer) => (
@@ -380,6 +378,6 @@ function AccessDialog({ selection, onClose, onContinue }: { selection: AccessSel
   );
 }
 
-function EmptyResults() {
-  return <div className="catalog-empty">没有匹配项。清除搜索或切换供给类型。</div>;
+function EmptyResults({ onReset }: { onReset: () => void }) {
+  return <div className="catalog-empty"><p>没有匹配项。可以清除精确筛选，或换一个任务类型。</p><button type="button" onClick={onReset}>清除精确筛选</button></div>;
 }

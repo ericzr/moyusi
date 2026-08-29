@@ -1,6 +1,29 @@
 import type { CatalogSelection, ModelKind, ModelModality, OfferType } from "./catalog";
 
 export type RouteStrategy = "auto" | "fixed" | "cost";
+export type RouteRegion = "中国" | "亚太" | "全球";
+export type RouteFallback = "same-model" | "pause";
+export type DesktopConnectionStatus = "connected" | "offline" | "not-installed";
+
+export type RoutePolicy = {
+  strategy: RouteStrategy;
+  preferredRegion: RouteRegion;
+  fallback: RouteFallback;
+  saveRequestBodies: false;
+};
+
+/**
+ * The browser owns policy and account state. The desktop app owns local
+ * credentials, local proxying and writes to third-party tool configuration.
+ * Keeping this boundary in the product state prevents the web UI from
+ * promising an action it cannot safely perform.
+ */
+export type DesktopConnection = {
+  status: DesktopConnectionStatus;
+  name: "Moyusi Desktop";
+  version?: string;
+  localRouter: "ready" | "stopped";
+};
 
 export type ActiveRoute = {
   modelId: string;
@@ -34,8 +57,9 @@ export type DemoPlatformState = {
   activeRoute: ActiveRoute;
   previousRoute: ActiveRoute | null;
   usageEvents: UsageEvent[];
-  routeStrategy: RouteStrategy;
+  routePolicy: RoutePolicy;
   connectedTools: string[];
+  desktop: DesktopConnection;
 };
 
 export type WorkspaceSummary = {
@@ -44,6 +68,7 @@ export type WorkspaceSummary = {
   activeSource: string;
   activeTools: string[];
   pendingAttention: number;
+  desktop: DesktopConnection;
 };
 
 export type BillingSummary = {
@@ -70,13 +95,23 @@ export function createInitialDemoState(): DemoPlatformState {
     },
     previousRoute: null,
     usageEvents: [],
-    routeStrategy: "auto",
+    routePolicy: { strategy: "auto", preferredRegion: "亚太", fallback: "same-model", saveRequestBodies: false },
     connectedTools: ["Codex", "Claude Code"],
+    desktop: { status: "connected", name: "Moyusi Desktop", version: "0.1", localRouter: "ready" },
   };
 }
 
 export function setRouteStrategy(state: DemoPlatformState, strategy: RouteStrategy): DemoPlatformState {
-  return state.routeStrategy === strategy ? state : { ...state, routeStrategy: strategy };
+  return state.routePolicy.strategy === strategy ? state : { ...state, routePolicy: { ...state.routePolicy, strategy } };
+}
+
+export function setRoutePolicy(state: DemoPlatformState, patch: Partial<Omit<RoutePolicy, "saveRequestBodies">>): DemoPlatformState {
+  const routePolicy = { ...state.routePolicy, ...patch, saveRequestBodies: false as const };
+  return routePolicy.strategy === state.routePolicy.strategy
+    && routePolicy.preferredRegion === state.routePolicy.preferredRegion
+    && routePolicy.fallback === state.routePolicy.fallback
+    ? state
+    : { ...state, routePolicy };
 }
 
 export function summarizeWorkspace(state: DemoPlatformState): WorkspaceSummary {
@@ -85,7 +120,8 @@ export function summarizeWorkspace(state: DemoPlatformState): WorkspaceSummary {
     activeModel: state.activeRoute.modelName,
     activeSource: state.activeRoute.sourceName,
     activeTools: state.connectedTools,
-    pendingAttention: state.connectedTools.length ? 2 : 3,
+    pendingAttention: (state.connectedTools.length ? 2 : 3) + (state.desktop.status === "connected" ? 0 : 1),
+    desktop: state.desktop,
   };
 }
 
