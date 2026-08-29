@@ -23,6 +23,17 @@ export type ProviderProfile = {
   updatedAt: string;
 };
 
+export type RouteProfile = {
+  id: string;
+  profileId: string;
+  modelId: string;
+  sourceIds: string[];
+  strategy: "auto" | "fixed" | "cost";
+  preferredRegion: "中国" | "亚太" | "全球";
+  enabled: boolean;
+  updatedAt: string;
+};
+
 export const DEMO_PROVIDER_SOURCES: readonly ProviderSource[] = [
   { id: "moyusi-stable", name: "Moyusi 稳定线路", vendor: "Moyusi", mode: "moyusi", status: "active", protocol: "Responses / Chat", health: "99.95%", modelCount: 12, note: "统一余额 · 亚太与全球入口" },
   { id: "openrouter", name: "OpenRouter", vendor: "OpenRouter", mode: "byok", status: "needs-auth", protocol: "OpenAI-compatible", health: "待授权", modelCount: 300, note: "使用你的账号结算", credentialHint: "本机安全存储" },
@@ -34,6 +45,12 @@ export const DEMO_PROVIDER_PROFILES: readonly ProviderProfile[] = [
   { id: "profile-codex", tool: "Codex", sourceId: "moyusi-stable", model: "GPT · Coding", enabled: true, updatedAt: "刚刚" },
   { id: "profile-claude", tool: "Claude Code", sourceId: "moyusi-stable", model: "Claude Sonnet", enabled: true, updatedAt: "今天 12:40" },
   { id: "profile-gemini", tool: "Gemini CLI", sourceId: "openrouter", model: "Gemini Flash", enabled: false, updatedAt: "昨天" },
+];
+
+export const DEMO_ROUTE_PROFILES: readonly RouteProfile[] = [
+  { id: "route-codex", profileId: "profile-codex", modelId: "gpt-coding", sourceIds: ["moyusi-stable", "openrouter"], strategy: "auto", preferredRegion: "亚太", enabled: true, updatedAt: "刚刚" },
+  { id: "route-claude", profileId: "profile-claude", modelId: "claude-sonnet", sourceIds: ["moyusi-stable", "anthropic-official"], strategy: "auto", preferredRegion: "亚太", enabled: true, updatedAt: "今天 12:40" },
+  { id: "route-gemini", profileId: "profile-gemini", modelId: "gemini-flash", sourceIds: ["openrouter", "moyusi-stable"], strategy: "fixed", preferredRegion: "全球", enabled: false, updatedAt: "昨天" },
 ];
 
 export function providerModeLabel(mode: ProviderMode): string {
