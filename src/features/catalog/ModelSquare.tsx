@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import {
   ArrowLeft,
   Check,
+  ChevronDown,
   ChevronRight,
   Code2,
   Cpu,
@@ -79,10 +80,10 @@ const PROTOCOL_OPTIONS: Array<{ value: string; label: string }> = [
 const BILLING_FILTERS: CatalogBilling[] = ["按量计费", "按请求"];
 
 const ACCESS_MODE_FILTERS: Array<{ value: OfferType; label: string }> = [
-  { value: "统一余额", label: "Moyusi 余额" },
+  { value: "统一余额", label: "平台代付" },
   { value: "BYOK", label: "自己的账号" },
   { value: "共享算力", label: "共享算力" },
-  { value: "专属算力", label: "专属算力" },
+  { value: "专属算力", label: "独享算力" },
   { value: "自有端点", label: "自己的服务器" },
 ];
 
@@ -275,32 +276,27 @@ function AdvancedFilterPanel({ modality, precision, setPrecision, onReset }: {
   setPrecision: React.Dispatch<React.SetStateAction<PrecisionFilters>>;
   onReset: () => void;
 }) {
+  const [showMore, setShowMore] = useState(false);
   const selectedCount = precision.tags.length + precision.offerTypes.length + precision.regions.length + Number(precision.maxLatencySeconds !== undefined) + Number(precision.minContextWindow !== undefined) + Number(precision.protocol !== undefined);
   return (
     <section className="advanced-filter-panel" aria-label="更多模型筛选">
       <div className="advanced-filter-head"><strong>更多条件</strong><button type="button" onClick={onReset} disabled={selectedCount === 0}><RotateCcw size={12} />重置</button></div>
-      <div className="advanced-filter-grid">
-      <FilterSection title="能力">
+      <section className="advanced-filter-capabilities">
+        <h3>能力</h3>
         {FEATURE_FILTERS[modality].map((tag) => <FacetButton key={tag} active={precision.tags.includes(tag)} onClick={() => setPrecision((current) => ({ ...current, tags: toggleValue(current.tags, tag) }))}>{tag}</FacetButton>)}
-      </FilterSection>
-      <FilterSection title="获取方式">
-        {ACCESS_MODE_FILTERS.map((item) => <FacetButton key={item.value} active={precision.offerTypes.includes(item.value)} onClick={() => setPrecision((current) => ({ ...current, offerTypes: toggleValue(current.offerTypes, item.value) }))}>{item.label}</FacetButton>)}
-      </FilterSection>
-      <FilterSection title="性能与兼容">
-        <div className="facet-select-stack">
+      </section>
+      <button className="advanced-more-toggle" type="button" aria-expanded={showMore} onClick={() => setShowMore((current) => !current)}><span>使用方式、服务区域与性能</span><ChevronDown size={13} /></button>
+      {showMore && <div className="advanced-more-grid">
+        <div className="filter-detail-field"><span>使用方式</span><div>{ACCESS_MODE_FILTERS.map((item) => <FacetButton key={item.value} active={precision.offerTypes.includes(item.value)} onClick={() => setPrecision((current) => ({ ...current, offerTypes: toggleValue(current.offerTypes, item.value) }))}>{item.label}</FacetButton>)}</div></div>
+        <div className="filter-detail-field"><span>服务区域</span><div>{REGION_FILTERS.map((region) => <FacetButton key={region} active={precision.regions.includes(region)} onClick={() => setPrecision((current) => ({ ...current, regions: toggleValue(current.regions, region) }))}>{region}</FacetButton>)}</div></div>
+        <div className="filter-detail-field filter-detail-selects">
           {modality === "语言" && <SelectMenu className="facet-select" label="上下文" ariaLabel="最小上下文" value={String(precision.minContextWindow ?? "")} options={CONTEXT_FILTERS.map((option) => ({ value: String(option.value ?? ""), label: option.label }))} onChange={(value) => setPrecision((current) => ({ ...current, minContextWindow: value ? Number(value) : undefined }))} />}
           <SelectMenu className="facet-select" label={modality === "视频" ? "排队" : "响应"} ariaLabel="响应上限" value={String(precision.maxLatencySeconds ?? "")} options={LATENCY_FILTERS[modality].map((option) => ({ value: String(option.value ?? ""), label: option.label }))} onChange={(value) => setPrecision((current) => ({ ...current, maxLatencySeconds: value ? Number(value) : undefined }))} />
           <SelectMenu className="facet-select" label="接口" ariaLabel="接口兼容" value={precision.protocol ?? ""} options={PROTOCOL_OPTIONS} onChange={(value) => setPrecision((current) => ({ ...current, protocol: (value || undefined) as ModelProtocol | undefined }))} />
         </div>
-        <div className="facet-subgroup"><span>区域</span><div>{REGION_FILTERS.map((region) => <FacetButton key={region} active={precision.regions.includes(region)} onClick={() => setPrecision((current) => ({ ...current, regions: toggleValue(current.regions, region) }))}>{region}</FacetButton>)}</div></div>
-      </FilterSection>
-      </div>
+      </div>}
     </section>
   );
-}
-
-function FilterSection({ title, children }: { title: string; children: React.ReactNode }) {
-  return <section className="catalog-filter-section"><h3>{title}</h3><div>{children}</div></section>;
 }
 
 function FacetButton({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
