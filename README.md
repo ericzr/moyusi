@@ -25,6 +25,7 @@ Moyusi 是一个“极简的 AI 工具控制台 + 模型与算力购买 + AI 工
 - [产品架构与开发主线](./docs/11-development-mainline.md)
 - [Stage 2 首条纵向切片](./docs/12-stage2-vertical-slice.md)
 - [仓库开发约束](./guidelines/Guidelines.md)
+- [CC Switch 能力矩阵与工作台开发主线](./docs/15-cc-switch-capability-matrix.md)
 
 ## 当前原型
 

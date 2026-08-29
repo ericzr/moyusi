@@ -126,12 +126,17 @@ src/
 /workspace/routing        路由与工具 Profile
 /workspace/sources        平台 Key、BYOK、供应商连接
 /workspace/deployments    共享、专属和自有开放模型端点
-/workspace/environments   WorkspaceProfile 与迁移报告
-/workspace/billing        用量、余额、账本和订单
-/workspace/account        账号、设备、会话与隐私
+/workspace/tools          目标工具、设备、应用发现与 Desktop Bridge
+/workspace/environment    WorkspaceProfile、MCP/Skills/Prompts 与迁移报告
+/workspace/sessions       会话索引、恢复检查点与迁移结果
+/workspace/usage          请求、Token、延迟和实际线路
+/workspace/billing        余额、账本、订单和退款
+/workspace/settings       账号、偏好、数据与隐私
 ```
 
 一级导航始终只有「模型广场」和「工作台」。工作台子路由可以复制链接，但不会升级成新的一级产品面。
+
+为兼容当前预览，`/workspace/account` 暂时重定向到 `/workspace/settings`，旧的 `billing` 页面继续兼容并逐步拆出 `usage`。工作台侧栏按“开始 / 接入 / 工作环境 / 费用 / 设置”分组，Provider、路由、Desktop 和资产迁移按任务组织，而不是照搬 CC Switch 的平级设置标签。
 
 ## 5. 状态与数据策略
 
@@ -240,6 +245,16 @@ POST /api/deployments
 - 完成安全、性能、可访问性和恢复演练。
 
 退出标准：任一调用与扣费可追溯，任何支付重放不重复入账，关键功能可关闭和回滚。
+
+### CC Switch 能力对齐门
+
+每个工作台切片都必须回答三个问题：
+
+1. 该能力服务于发现、比较、接入、切换、迁移或费用解释中的哪一个闭环；
+2. 该能力由 Web 展示、Desktop 执行，还是由 Gateway/Control Plane 负责；
+3. 失败时是否有可读状态、备份和回滚。
+
+如果不能回答以上问题，能力不得直接进入主导航。完整映射见 [15-cc-switch-capability-matrix.md](./15-cc-switch-capability-matrix.md)。
 
 ## 8. 第一开发迭代
 

@@ -20,6 +20,7 @@
 14. [12-stage2-vertical-slice.md](./12-stage2-vertical-slice.md)：模型来源选择、一键切换、可恢复路由、模拟调用与费用记录的首条纵向闭环。
 15. [13-web-desktop-boundary.md](./13-web-desktop-boundary.md)：CC Switch 能力拆解、网页与桌面端边界及轻量桥接决策。
 16. [14-stage2-route-control.md](./14-stage2-route-control.md)：typed mock API、目录状态与路由策略控制的 Stage 2 增量。
+17. [15-cc-switch-capability-matrix.md](./15-cc-switch-capability-matrix.md)：逐页核对 CC Switch 截图、能力取舍矩阵与 Moyusi 工作台后续开发主线。
 
 ## 当前冻结的产品决策
 

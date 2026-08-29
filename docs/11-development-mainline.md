@@ -171,3 +171,16 @@ WorkspaceProfile 先覆盖 MCP、Skills 和 Prompts，再扩展经审核记忆�
 5. 加一条浏览器 E2E，锁住刷新、返回、余额不足、BYOK 分流与迁移确认。
 
 在此闭环通过前，不开始真实充值、生产上游凭证或本机配置写入。
+
+## 8. CC Switch 截图核对后的主线调整
+
+逐页核对 CC Switch 后，下一批不再按“设置页”堆叠功能，而按四个可验证闭环推进：
+
+1. **Provider 与来源**：预设来源、BYOK、统一 Provider Profile、自定义协议探测；
+2. **路由与本机执行**：RouteProfile、同模型回退、健康检查、Desktop 心跳、配置 diff、备份和回滚；
+3. **工作环境与会话**：MCP/Skills/Prompts 统一资产列表、目标应用适配、Session Index 和迁移报告；
+4. **用量与诊断**：请求事件、实际线路、价格版本、账本、外部 BYOK 估算和连通性诊断。
+
+工作台导航收敛为五组：开始（总览/模型切换）、接入（来源与凭证/模型与部署/工具与设备）、工作环境（配置与迁移/会话）、费用（用量与请求/余额与账单）、设置（偏好/数据/安全）。`account` 保留兼容路径，但不再作为顶层产品入口。
+
+详细截图证据、页面能力矩阵、P0/P1/P2 取舍和分阶段退出标准见 [15-cc-switch-capability-matrix.md](./15-cc-switch-capability-matrix.md)。
