@@ -101,6 +101,7 @@ const CONTEXT_FILTERS = [
 
 const SORT_OPTIONS: Array<{ id: CatalogSort; label: string }> = [
   { id: "recommended", label: "综合推荐" },
+  { id: "capability", label: "能力优先" },
   { id: "price", label: "最低起价" },
   { id: "latency", label: "最快响应" },
   { id: "context", label: "最大上下文" },

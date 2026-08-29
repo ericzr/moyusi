@@ -23,6 +23,17 @@ export function filterCatalog(offers: readonly ModelOffer[], filter: CatalogFilt
   });
 
   return [...filtered].sort((left, right) => {
+    if (filter.sort === "capability") {
+      // Capability ordering is intentionally explainable: verified capability
+      // coverage first, then task tags and context capacity as a tie-breaker.
+      const capabilityScore = (offer: ModelOffer) => new Set([...(offer.capabilities ?? []), ...offer.tags]).size * 10
+        + offer.tags.length * 3
+        + Math.min(offer.contextWindow ?? 0, 1_000_000) / 100_000;
+      const leftScore = capabilityScore(left);
+      const rightScore = capabilityScore(right);
+      return rightScore - leftScore
+        || (Number.parseFloat(right.performance?.successRate ?? "0") || 0) - (Number.parseFloat(left.performance?.successRate ?? "0") || 0);
+    }
     if (filter.sort === "price") return (left.priceCny ?? Number.POSITIVE_INFINITY) - (right.priceCny ?? Number.POSITIVE_INFINITY);
     if (filter.sort === "latency") return (left.latencySeconds ?? Number.POSITIVE_INFINITY) - (right.latencySeconds ?? Number.POSITIVE_INFINITY);
     if (filter.sort === "context") return (right.contextWindow ?? 0) - (left.contextWindow ?? 0);

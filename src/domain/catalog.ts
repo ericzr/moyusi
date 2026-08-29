@@ -3,7 +3,7 @@ export type ModelKind = "闭源 API" | "开放权重";
 export type OfferType = "统一余额" | "BYOK" | "共享算力" | "专属算力" | "自有端点";
 export type ModelRegion = "中国" | "亚太" | "全球";
 export type ModelProtocol = "OpenAI" | "Anthropic" | "Google";
-export type CatalogSort = "recommended" | "price" | "latency" | "context";
+export type CatalogSort = "recommended" | "capability" | "price" | "latency" | "context";
 export type CatalogBilling = "按量计费" | "按请求";
 
 export type CatalogPricing = {

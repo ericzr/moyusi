@@ -79,9 +79,11 @@ describe("catalog repository", () => {
   it("sorts by normalized measurements without mutating its input", () => {
     const languageOffers = catalogRepository.list({ modality: "语言" });
     const priceSorted = filterCatalog(languageOffers, { sort: "price" });
+    const capabilitySorted = filterCatalog(languageOffers, { sort: "capability" });
     const contextSorted = filterCatalog(languageOffers, { sort: "context" });
 
     expect(priceSorted[0]?.id).toBe("qwen-coder-open");
+    expect(capabilitySorted[0]?.id).toBe("gemini-flash");
     expect(contextSorted[0]?.id).toBe("gemini-flash");
     expect(languageOffers[0]?.id).toBe("claude-sonnet");
   });
