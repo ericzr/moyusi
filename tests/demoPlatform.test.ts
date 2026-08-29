@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
   activateSelection,
+  beginRouteActivation,
+  completeRouteActivation,
   createInitialDemoState,
   recordMockUsage,
   restorePreviousRoute,
@@ -72,5 +74,13 @@ describe("demo platform vertical slice", () => {
     const state = createInitialDemoState();
     const summary = summarizeWorkspace({ ...state, desktop: { ...state.desktop, status: "offline", localRouter: "stopped" } });
     expect(summary.pendingAttention).toBe(3);
+  });
+
+  it("tracks route activation as a recoverable state transition", () => {
+    const initial = createInitialDemoState();
+    const checking = beginRouteActivation(initial, "op_route_demo", "2026-08-28T12:00:00.000Z");
+    expect(checking.routeActivation).toMatchObject({ status: "checking", operationId: "op_route_demo" });
+    const ready = completeRouteActivation(checking, "2026-08-28T12:00:01.000Z");
+    expect(ready.routeActivation).toMatchObject({ status: "ready", operationId: "op_route_demo" });
   });
 });

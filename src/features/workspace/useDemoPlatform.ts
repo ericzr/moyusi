@@ -2,7 +2,10 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { CatalogSelection } from "../../domain/catalog";
 import {
   activateSelection,
+  beginRouteActivation,
+  completeRouteActivation,
   createInitialDemoState,
+  failRouteActivation,
   isDemoPlatformState,
   recordMockUsage,
   restorePreviousRoute,
@@ -29,9 +32,16 @@ export function useDemoPlatform() {
     }
   }, [state]);
 
-  async function activate(selection: CatalogSelection): Promise<void> {
-    await delay(MOCK_DELAY_MS);
-    commit((current) => activateSelection(current, selection, new Date().toISOString()));
+  async function activate(selection: CatalogSelection, operationId = `op_route_${Date.now().toString(36)}`): Promise<void> {
+    commit((current) => beginRouteActivation(current, operationId, new Date().toISOString()));
+    try {
+      await delay(MOCK_DELAY_MS);
+      const activatedAt = new Date().toISOString();
+      commit((current) => completeRouteActivation(activateSelection(current, selection, activatedAt), activatedAt));
+    } catch (error) {
+      commit((current) => failRouteActivation(current, error instanceof Error ? error.message : "来源检查失败", new Date().toISOString()));
+      throw error;
+    }
   }
 
   async function simulateCall(): Promise<UsageEvent> {
@@ -76,6 +86,7 @@ function readLocalState(): DemoPlatformState {
       routePolicy: parsed.routePolicy ?? { strategy: legacy.routeStrategy ?? "auto", preferredRegion: "亚太", fallback: "same-model", saveRequestBodies: false },
       connectedTools: parsed.connectedTools ?? ["Codex", "Claude Code"],
       desktop: parsed.desktop ?? createInitialDemoState().desktop,
+      routeActivation: parsed.routeActivation ?? createInitialDemoState().routeActivation,
     };
   } catch {
     return createInitialDemoState();

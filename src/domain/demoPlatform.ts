@@ -38,6 +38,13 @@ export type ActiveRoute = {
   activatedAt: string;
 };
 
+export type RouteActivation = {
+  status: "ready" | "checking" | "failed";
+  operationId?: string;
+  message: string;
+  updatedAt: string;
+};
+
 export type UsageEvent = {
   id: string;
   createdAt: string;
@@ -60,6 +67,7 @@ export type DemoPlatformState = {
   routePolicy: RoutePolicy;
   connectedTools: string[];
   desktop: DesktopConnection;
+  routeActivation: RouteActivation;
 };
 
 export type WorkspaceSummary = {
@@ -98,7 +106,20 @@ export function createInitialDemoState(): DemoPlatformState {
     routePolicy: { strategy: "auto", preferredRegion: "亚太", fallback: "same-model", saveRequestBodies: false },
     connectedTools: ["Codex", "Claude Code"],
     desktop: { status: "connected", name: "Moyusi Desktop", version: "0.1", localRouter: "ready" },
+    routeActivation: { status: "ready", message: "当前来源可用", updatedAt: "2026-08-26T10:00:00.000Z" },
   };
+}
+
+export function beginRouteActivation(state: DemoPlatformState, operationId: string, startedAt: string): DemoPlatformState {
+  return { ...state, routeActivation: { status: "checking", operationId, message: "正在检查来源并应用到本机工具", updatedAt: startedAt } };
+}
+
+export function completeRouteActivation(state: DemoPlatformState, completedAt: string): DemoPlatformState {
+  return { ...state, routeActivation: { ...state.routeActivation, status: "ready", message: "当前来源已应用到本机工具", updatedAt: completedAt } };
+}
+
+export function failRouteActivation(state: DemoPlatformState, message: string, failedAt: string): DemoPlatformState {
+  return { ...state, routeActivation: { ...state.routeActivation, status: "failed", message, updatedAt: failedAt } };
 }
 
 export function setRouteStrategy(state: DemoPlatformState, strategy: RouteStrategy): DemoPlatformState {
@@ -116,7 +137,7 @@ export function setRoutePolicy(state: DemoPlatformState, patch: Partial<Omit<Rou
 
 export function summarizeWorkspace(state: DemoPlatformState): WorkspaceSummary {
   return {
-    routeStatus: state.activeRoute.health === "待探测" ? "degraded" : "ready",
+    routeStatus: state.routeActivation.status === "ready" && state.activeRoute.health !== "待探测" ? "ready" : "degraded",
     activeModel: state.activeRoute.modelName,
     activeSource: state.activeRoute.sourceName,
     activeTools: state.connectedTools,

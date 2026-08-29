@@ -44,6 +44,18 @@
 .desktop-bridge > span { display: inline-flex; align-items: center; gap: 6px; color: var(--ok); font: 650 8px/1 ui-monospace, SFMono-Regular, Menlo, monospace; white-space: nowrap; }
 .desktop-bridge > span i[data-state="offline"] { background: var(--warn); }
 .desktop-bridge > span i[data-state="not-installed"] { background: var(--text-faint); }
+.route-activation-status { display: flex; align-items: center; gap: 9px; margin-bottom: 14px; padding: 10px 12px; border: 1px solid var(--line); border-radius: var(--radius-md); background: var(--surface); }
+.route-activation-status > div { min-width: 0; }
+.route-activation-status strong, .route-activation-status small { display: block; }
+.route-activation-status strong { font-size: 9px; }
+.route-activation-status small { margin-top: 3px; color: var(--text-faint); font-size: 8px; }
+.route-activation-dot { width: 7px; height: 7px; flex: 0 0 auto; border-radius: 50%; background: var(--ok); }
+.route-activation-status[data-state="checking"] { border-color: color-mix(in srgb, var(--brand-red) 32%, var(--line)); }
+.route-activation-status[data-state="checking"] .route-activation-dot { background: var(--brand-red); }
+.route-activation-status[data-state="failed"] { border-color: color-mix(in srgb, var(--warn) 42%, var(--line)); }
+.route-activation-status[data-state="failed"] .route-activation-dot { background: var(--warn); }
+.route-activation-spinner { width: 12px; height: 12px; margin-left: auto; flex: 0 0 auto; border: 1px solid var(--line-strong); border-top-color: var(--brand-red); border-radius: 50%; animation: moyusi-spin .7s linear infinite; }
+@keyframes moyusi-spin { to { transform: rotate(360deg); } }
 .overview-grid, .two-column-panels, .source-grid, .environment-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; margin-bottom: 14px; }
 .workspace-panel { min-width: 0; padding: 17px; border: 1px solid var(--line); border-radius: var(--radius-md); background: var(--surface); }
 .panel-head { min-height: 42px; display: flex; align-items: flex-start; justify-content: space-between; gap: 18px; }
@@ -107,6 +119,9 @@
 .route-order-row > div small { margin-top: 4px; color: var(--text-faint); font-size: 8px; }
 .route-health { display: inline-flex; align-items: center; gap: 6px; color: var(--ok); font: 650 8px/1 ui-monospace, SFMono-Regular, Menlo, monospace; }
 .route-order-row > svg { color: var(--text-faint); }
+.route-order-row > button { min-height: 27px; padding: 0 8px; border: 1px solid var(--line); border-radius: 5px; background: var(--surface); color: var(--text); font-size: 8px; }
+.route-order-row > button:hover { border-color: var(--line-strong); background: var(--surface-raised); }
+.route-order-row > button:disabled { cursor: wait; opacity: .62; }
 .panel-footer { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding-top: 14px; color: var(--text-faint); font-size: 8px; }
 .panel-footer button { padding: 0; border: 0; background: transparent; color: var(--text); font-size: 9px; font-weight: 650; }
 .route-actions > div { display: flex; align-items: center; gap: 10px; }

@@ -29,7 +29,7 @@ import {
 } from "lucide-react";
 import { getAccessFlow, type WorkspaceSection } from "../../domain/accessPolicy";
 import type { CatalogSelection } from "../../domain/catalog";
-import type { ActiveRoute, DesktopConnection, RoutePolicy, RouteStrategy, UsageEvent } from "../../domain/demoPlatform";
+import type { ActiveRoute, DesktopConnection, RouteActivation, RoutePolicy, RouteStrategy, UsageEvent } from "../../domain/demoPlatform";
 import type { ByokProvider, MigrationOutcome, MigrationTarget } from "../../domain/portableWorkspace";
 import { providerModeLabel, providerStatusLabel, providerStatusTone, type ProviderProfile, type ProviderSource } from "../../domain/provider";
 import { catalogRepository } from "../../services/catalogRepository";
@@ -78,7 +78,7 @@ export function Workspace({
   onActivateSelection: (selection: CatalogSelection) => Promise<void>;
   onClearPendingSelection: () => void;
   onNavigate: (section: WorkspaceSection) => void;
-  onBrowseModels: () => void;
+  onBrowseModels: (modelId?: string) => void;
 }) {
   const [notice, setNotice] = useState<string | null>(null);
   const [profiles, setProfiles] = useState<ProviderProfile[]>(readProviderProfiles);
@@ -134,7 +134,7 @@ export function Workspace({
       <section className="workspace-content">
         {pendingSelection && <PendingSelection selection={pendingSelection} desktop={desktop} onActivate={onActivateSelection} onProvision={(selection, budgetLimitCny) => { setProvisioningDeployment({ selection, budgetLimitCny }); onClearPendingSelection(); }} onAction={act} />}
         {section === "overview" && <Overview activeRoute={platform.state.activeRoute} periodCost={platform.billing.periodCostCny} requestCount={platform.billing.requestCount} routePolicy={platform.state.routePolicy} connectedTools={summary?.activeTools ?? platform.state.connectedTools} desktop={desktop} onNavigate={onNavigate} onSimulateCall={platform.simulateCall} onAction={act} />}
-        {section === "routing" && <Routing activeRoute={platform.state.activeRoute} previousRoute={platform.state.previousRoute} routePolicy={platform.state.routePolicy} desktop={desktop} onBrowseModels={onBrowseModels} onSimulateCall={platform.simulateCall} onRestore={platform.restore} onUpdatePolicy={platform.updateRoutePolicy} onAction={act} />}
+        {section === "routing" && <Routing activeRoute={platform.state.activeRoute} previousRoute={platform.state.previousRoute} routeActivation={platform.state.routeActivation} routePolicy={platform.state.routePolicy} desktop={desktop} onBrowseModels={onBrowseModels} onActivateSelection={onActivateSelection} onSimulateCall={platform.simulateCall} onRestore={platform.restore} onUpdatePolicy={platform.updateRoutePolicy} onAction={act} />}
         {section === "sources" && <Sources workspace={portableWorkspace} profiles={profiles} onUpdateProfile={updateProfile} onAction={act} />}
         {section === "deployments" && <Deployments provisioning={provisioningDeployment} onBrowseModels={onBrowseModels} onAction={act} />}
         {section === "tools" && <Tools desktop={desktop} connectedTools={summary?.activeTools ?? platform.state.connectedTools} onAction={act} />}
@@ -315,17 +315,13 @@ function Overview({ activeRoute, periodCost, requestCount, routePolicy, connecte
   );
 }
 
-function Routing({ activeRoute, previousRoute, routePolicy, desktop, onBrowseModels, onSimulateCall, onRestore, onUpdatePolicy, onAction }: { activeRoute: ActiveRoute; previousRoute: ActiveRoute | null; routePolicy: RoutePolicy; desktop: DesktopConnection; onBrowseModels: () => void; onSimulateCall: () => Promise<UsageEvent>; onRestore: () => void; onUpdatePolicy: (patch: Partial<Omit<RoutePolicy, "saveRequestBodies">>) => void; onAction: (message: string) => void }) {
+function Routing({ activeRoute, previousRoute, routeActivation, routePolicy, desktop, onBrowseModels, onActivateSelection, onSimulateCall, onRestore, onUpdatePolicy, onAction }: { activeRoute: ActiveRoute; previousRoute: ActiveRoute | null; routeActivation: RouteActivation; routePolicy: RoutePolicy; desktop: DesktopConnection; onBrowseModels: (modelId?: string) => void; onActivateSelection: (selection: CatalogSelection) => Promise<void>; onSimulateCall: () => Promise<UsageEvent>; onRestore: () => void; onUpdatePolicy: (patch: Partial<Omit<RoutePolicy, "saveRequestBodies">>) => void; onAction: (message: string) => void }) {
   const [testing, setTesting] = useState(false);
+  const [switchingSource, setSwitchingSource] = useState<string | null>(null);
   const activeOffer = catalogRepository.getById(activeRoute.modelId);
   const fallbacks = activeOffer?.sources
     .filter((source) => source.name !== activeRoute.sourceName)
-    .slice(0, 2)
-    .map((source) => ({
-      name: activeRoute.modelName,
-      meta: `${source.mode} · ${source.name} · ${source.latency}`,
-      health: source.health,
-    })) ?? [];
+    .slice(0, 3) ?? [];
 
   async function simulate() {
     setTesting(true);
@@ -346,10 +342,28 @@ function Routing({ activeRoute, previousRoute, routePolicy, desktop, onBrowseMod
     onAction(`已恢复 ${previousName}`);
   }
 
+  async function switchSource(source: (typeof fallbacks)[number]) {
+    if (!activeOffer) return;
+    if (source.mode !== "统一余额") {
+      onBrowseModels(activeOffer.id);
+      return;
+    }
+    setSwitchingSource(source.name);
+    try {
+      await onActivateSelection({ offer: activeOffer, source });
+      onAction(`已切换到 ${source.name}，原来源保留为备用`);
+    } catch {
+      onAction("来源切换没有完成，当前路由未改变");
+    } finally {
+      setSwitchingSource(null);
+    }
+  }
+
   return (
     <>
-      <PageHead title="模型切换" action={<button className="button button-primary compact-button" type="button" onClick={onBrowseModels}>从广场选择模型</button>} />
+      <PageHead title="模型切换" action={<button className="button button-primary compact-button" type="button" onClick={() => onBrowseModels()}>从广场选择模型</button>} />
       <DesktopBridge desktop={desktop} />
+      <RouteActivationStatus activation={routeActivation} />
       <Panel>
         <PanelHead eyebrow="PROVIDER PROFILE" title={`${toolLabel(activeRoute)} · 当前模型`} action={<span className="inline-status"><i />{fallbacks.length} 个备用来源</span>} />
         <div className="strategy-bar">
@@ -358,7 +372,7 @@ function Routing({ activeRoute, previousRoute, routePolicy, desktop, onBrowseMod
         </div>
         <div className="route-order">
           <RouteOrder index="01" name={activeRoute.modelName} meta={`${activeRoute.sourceMode} · ${activeRoute.sourceName}`} health={activeRoute.health} />
-          {fallbacks.map((route, index) => <RouteOrder key={route.name} index={`0${index + 2}`} name={route.name} meta={route.meta} health={route.health} />)}
+          {fallbacks.map((source, index) => <RouteOrder key={source.name} index={`0${index + 2}`} name={activeRoute.modelName} meta={`${source.mode} · ${source.name} · ${source.latency}`} health={source.health} action={<button type="button" disabled={switchingSource !== null} onClick={() => void switchSource(source)}>{switchingSource === source.name ? "切换中…" : source.mode === "统一余额" ? "设为主来源" : "去接入"}</button>} />)}
         </div>
         <div className="panel-footer route-actions"><span>当前来源不可用时，自动尝试下面的备用来源</span><div>{previousRoute && <button type="button" onClick={restore}>恢复 {previousRoute.modelName}</button>}<button className="test-call-button" type="button" disabled={testing} onClick={simulate}>{testing ? "正在调用…" : "模拟调用"}</button></div></div>
       </Panel>
@@ -626,7 +640,9 @@ function Metric({ label, value, note }: { label: string; value: string; note: st
 function RouteNode({ icon: Icon, label, detail, active = false }: { icon: LucideIcon; label: string; detail: string; active?: boolean }) { return <div className="route-node" data-active={active}><Icon size={17} /><div><strong>{label}</strong><span>{detail}</span></div></div>; }
 function AssetCount({ icon: Icon, label, value }: { icon: LucideIcon; label: string; value: string }) { return <div><Icon size={15} /><span>{label}</span><strong>{value}</strong></div>; }
 function Attention({ icon: Icon, title, description, action, onClick }: { icon: LucideIcon; title: string; description: string; action: string; onClick: () => void }) { return <div className="attention-row"><Icon size={17} /><div><strong>{title}</strong><p>{description}</p></div><button type="button" onClick={onClick}>{action}<ChevronRight size={13} /></button></div>; }
-function RouteOrder({ index, name, meta, health }: { index: string; name: string; meta: string; health: string }) { return <div className="route-order-row"><span className="route-index">{index}</span><div><strong>{name}</strong><small>{meta}</small></div><span className="route-health"><i />{health}</span><Settings2 size={14} /></div>; }
+function RouteOrder({ index, name, meta, health, action }: { index: string; name: string; meta: string; health: string; action?: ReactNode }) { return <div className="route-order-row"><span className="route-index">{index}</span><div><strong>{name}</strong><small>{meta}</small></div><span className="route-health"><i />{health}</span>{action ?? <Settings2 size={14} />}</div>; }
+function RouteActivationStatus({ activation }: { activation: RouteActivation }) { return <div className="route-activation-status" data-state={activation.status}><span className="route-activation-dot" /><div><strong>{activation.message}</strong><small>{activation.status === "checking" ? "正在等待 Desktop 完成本机配置更新" : activation.status === "failed" ? "当前路由保持不变，可以从模型详情重试" : `最近更新：${formatActivationTime(activation.updatedAt)}`}</small></div>{activation.status === "checking" && <span className="route-activation-spinner" aria-label="处理中" />}</div>; }
+function formatActivationTime(value: string): string { const timestamp = Date.parse(value); return Number.isFinite(timestamp) ? new Intl.DateTimeFormat("zh-CN", { hour: "2-digit", minute: "2-digit" }).format(timestamp) : "刚刚"; }
 function SettingRow({ label, value }: { label: string; value: string }) { return <div className="setting-row"><span>{label}</span><strong>{value}</strong></div>; }
 function SourceRow({ name, meta, status }: { name: string; meta: string; status: string }) { return <div className="source-row"><span className="source-icon"><PlugZap size={15} /></span><div><strong>{name}</strong><small>{meta}</small></div><span>{status}</span></div>; }
 function Deployment({ icon: Icon, name, type, state, details, action, onClick }: { icon: LucideIcon; name: string; type: string; state: string; details: string[]; action: string; onClick: () => void }) { return <article className="deployment-row"><span className="deployment-icon"><Icon size={18} /></span><div><strong>{name}</strong><small>{type}</small></div><span className="deployment-state" data-state={state}><i />{state}</span>{details.map((detail) => <span key={detail}>{detail}</span>)}<button type="button" onClick={onClick}>{action}</button></article>; }

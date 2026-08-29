@@ -101,12 +101,12 @@ function WorkspaceRoute({ platform }: { platform: DemoPlatformController }) {
       onActivateSelection={async (selection) => {
         const result = controlPlaneRepository.execute({ kind: "save-route", projectId: "project_default", routeProfileId: "route-codex", modelId: selection.offer.id, sourceIds: [`${selection.offer.id}:${selection.source.name}`], strategy: platform.state.routePolicy.strategy }, { desktopConnected: platform.state.desktop.status === "connected" && platform.state.desktop.localRouter === "ready" });
         if (result.status !== "succeeded") throw new Error(result.error?.message ?? "路由没有保存");
-        await platform.activate(selection);
+        await platform.activate(selection, result.operationId);
         navigate("/workspace/routing", { replace: true });
       }}
       onClearPendingSelection={() => navigate(`/workspace/${section}`, { replace: true })}
       onNavigate={(nextSection) => navigate(`/workspace/${nextSection}${selectionSection === nextSection ? location.search : ""}`)}
-      onBrowseModels={() => navigate("/market")}
+      onBrowseModels={(modelId) => navigate(modelId ? `/market/${modelId}` : "/market")}
     />
   );
 }
