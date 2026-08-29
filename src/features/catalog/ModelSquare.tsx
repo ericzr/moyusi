@@ -107,10 +107,38 @@ const SORT_OPTIONS: Array<{ id: CatalogSort; label: string }> = [
 ];
 
 const SUPPLY_OPTIONS = [
-  { value: "全部供给", label: "不限" },
-  { value: "闭源 API", label: "闭源 API" },
-  { value: "开放权重", label: "开放权重" },
+  { value: "全部供给", label: "全部模型" },
+  { value: "闭源 API", label: "官方 / 中转" },
+  { value: "开放权重", label: "开放模型 / 算力" },
 ];
+
+function sourceKindLabel(source: SupplyOption): string {
+  if (/官方|OpenAI API|Anthropic API|Google AI API/i.test(source.name)) return "官方 API";
+  if (source.mode === "BYOK") return "自己的账号";
+  if (source.mode === "共享算力" || source.mode === "专属算力") return "算力部署";
+  if (source.mode === "自有端点") return "自有端点";
+  if (/合作中转|中转/i.test(source.name)) return "合作中转";
+  return "Moyusi 线路";
+}
+
+function sourceRank(source: SupplyOption): number {
+  const label = sourceKindLabel(source);
+  return label === "官方 API" ? 0 : label === "Moyusi 线路" ? 1 : label === "合作中转" ? 2 : label === "自己的账号" ? 3 : 4;
+}
+
+function orderedSources(sources: SupplyOption[]): SupplyOption[] {
+  return sources.map((source, index) => ({ source, index })).sort((a, b) => sourceRank(a.source) - sourceRank(b.source) || Number(Boolean(b.source.recommended)) - Number(Boolean(a.source.recommended)) || a.index - b.index).map(({ source }) => source);
+}
+
+function sourceSummary(offer: ModelOffer): string {
+  const sources = orderedSources(offer.sources);
+  const labels = sources.slice(0, 2).map(sourceKindLabel);
+  return labels.length ? `${labels.join(" · ")}${sources.length > 2 ? ` · +${sources.length - 2}` : ""}` : "暂无来源";
+}
+
+function kindLabel(kind: ModelKind): string {
+  return kind === "开放权重" ? "开放模型 / 算力" : "官方 / 中转";
+}
 
 function toggleValue<T>(values: T[], value: T): T[] {
   return values.includes(value) ? values.filter((item) => item !== value) : [...values, value];
@@ -174,13 +202,13 @@ export function ModelSquare({ onOpenDetail }: { onOpenDetail: (modelId: string) 
   };
 
   const activeFilters = [
-    filter !== "全部供给" ? { label: filter, onRemove: () => setFilter("全部供给") } : null,
+    filter !== "全部供给" ? { label: kindLabel(filter), onRemove: () => setFilter("全部供给") } : null,
     provider !== "全部供应商" ? { label: provider, onRemove: () => setProvider("全部供应商") } : null,
     billing !== "全部定价" ? { label: billing, onRemove: () => setBilling("全部定价") } : null,
     ...precision.tags.map((tag) => ({ label: tag, onRemove: () => setPrecision((current) => ({ ...current, tags: current.tags.filter((item) => item !== tag) })) })),
     ...precision.offerTypes.map((type) => ({ label: ACCESS_MODE_FILTERS.find((item) => item.value === type)?.label ?? type, onRemove: () => setPrecision((current) => ({ ...current, offerTypes: current.offerTypes.filter((item) => item !== type) })) })),
     ...precision.regions.map((region) => ({ label: region, onRemove: () => setPrecision((current) => ({ ...current, regions: current.regions.filter((item) => item !== region) })) })),
-    precision.protocol ? { label: precision.protocol, onRemove: () => setPrecision((current) => ({ ...current, protocol: undefined })) } : null,
+    precision.protocol ? { label: `${precision.protocol} 兼容`, onRemove: () => setPrecision((current) => ({ ...current, protocol: undefined })) } : null,
     precision.minContextWindow ? { label: `上下文 ≥ ${Math.round(precision.minContextWindow / 1000)}K`, onRemove: () => setPrecision((current) => ({ ...current, minContextWindow: undefined })) } : null,
     precision.maxLatencySeconds ? { label: `响应 ≤ ${precision.maxLatencySeconds}s`, onRemove: () => setPrecision((current) => ({ ...current, maxLatencySeconds: undefined })) } : null,
   ].filter((item): item is { label: string; onRemove: () => void } => Boolean(item));
@@ -206,7 +234,7 @@ export function ModelSquare({ onOpenDetail }: { onOpenDetail: (modelId: string) 
         </div>
         <div className="market-control-row">
           <div className="primary-filter-bar" aria-label="常用筛选">
-            <SelectMenu className="filter-select" label="开放性" ariaLabel="供给类型" value={filter} options={SUPPLY_OPTIONS} onChange={(value) => setFilter(value as Filter)} />
+            <SelectMenu className="filter-select" label="接入方式" ariaLabel="模型接入方式" value={filter} options={SUPPLY_OPTIONS} onChange={(value) => setFilter(value as Filter)} />
             <SelectMenu className="filter-select" label="供应商" ariaLabel="供应商" value={provider} options={providers.map((item) => ({ value: item, label: item }))} onChange={setProvider} />
             <SelectMenu className="filter-select" label="计费" ariaLabel="定价方式" value={billing} options={[{ value: "全部定价", label: "全部" }, ...BILLING_FILTERS.map((item) => ({ value: item, label: item }))]} onChange={(value) => setBilling(value as BillingFilter)} />
             <button className="precision-trigger" type="button" aria-expanded={showPrecision} onClick={() => setShowPrecision((current) => !current)}><SlidersHorizontal size={13} />能力与性能{precisionCount > 0 && <b>{precisionCount}</b>}</button>
@@ -329,12 +357,12 @@ function CompactResults({ offers, priceUnit, onOpenDetail, onReset }: { offers: 
       <div className="offer-list">
         {offers.map((offer) => (
           <article className="offer-row" key={offer.id}>
-            <span className="model-identity">
+              <span className="model-identity">
               <span className="model-glyph" aria-hidden="true">{offer.kind === "开放权重" ? <Cpu size={15} /> : <Code2 size={15} />}</span>
               <span><span className="model-title-line"><strong>{offer.name}</strong><small>{offer.family}</small></span><code className="model-id">{offer.modelId}</code><span className="model-summary">{offer.summary}</span></span>
             </span>
             <span className="offer-use">{offer.tags.slice(0, 2).map((tag) => <small key={tag}>{tag}</small>)}</span>
-            <span className="offer-fact"><small>{offer.sources[0]?.recommended ? "主来源" : "可切换来源"}</small><strong>{offer.sources.length} 个来源</strong><em>{offer.sources[0]?.mode ?? offer.offerType}</em></span>
+            <span className="offer-fact"><small>可切换来源</small><strong>{offer.sources.length} 个来源</strong><em>{sourceSummary(offer)}</em></span>
             <span className="offer-price"><strong>{inputPrice(offer, priceUnit)}</strong><small>{outputPrice(offer, priceUnit)}</small></span>
             <span className="offer-latency"><strong>{offer.performance?.latency ?? offer.latency}</strong><small>{offer.performance?.throughput ?? "吞吐待测"}</small></span>
             <span className="offer-health"><strong><i />{offer.performance?.successRate ?? offer.health}</strong><small>{offer.performance?.checkedAt ?? "24h 窗口"}</small></span>
@@ -353,7 +381,7 @@ function CardResults({ offers, priceUnit, onOpenDetail, onReset }: { offers: Mod
     <div className="model-card-grid">
       {offers.map((offer) => (
         <article className="model-card" key={offer.id}>
-          <span className="model-card-head"><span><strong>{offer.name}</strong><small>{offer.family}</small></span><em>{offer.kind}</em></span>
+          <span className="model-card-head"><span><strong>{offer.name}</strong><small>{offer.family}</small></span><em>{kindLabel(offer.kind)}</em></span>
           <code className="model-card-id">{offer.modelId}</code>
           <span className="model-card-summary">{offer.summary}</span>
           <span className="model-card-facts">
@@ -362,7 +390,7 @@ function CardResults({ offers, priceUnit, onOpenDetail, onReset }: { offers: Mod
             <span><small>最近成功率</small><strong className="card-health"><i />{offer.performance?.successRate ?? offer.health}</strong></span>
             <span><small>来源 / 接口</small><strong>{offer.sources.length} 个 · {offer.protocol}</strong></span>
           </span>
-          <span className="model-card-footer"><small>{offer.sources[0] ? `${offer.sources[0].recommended ? "主来源" : "来源"} · ${offer.sources[0].name}` : offer.protocol}</small><button type="button" onClick={() => onOpenDetail(offer)}>查看详情<ChevronRight size={12} /></button></span>
+          <span className="model-card-footer"><small>{sourceSummary(offer)}</small><button type="button" onClick={() => onOpenDetail(offer)}>查看详情<ChevronRight size={12} /></button></span>
         </article>
       ))}
     </div>
@@ -431,9 +459,9 @@ function ModelDetail({ offer, onBack, onChooseSource }: { offer: ModelOffer; onB
         <div className="detail-section-head"><h2>同一模型，选择不同来源</h2><span>{offer.sources.length} 个可用来源</span></div>
         <div className="source-table">
           <div className="source-table-head" aria-hidden="true"><span>模型来源</span><span>怎么付费</span><span>价格</span><span>响应 / 排队</span><span>稳定性</span><span>操作</span></div>
-          {offer.sources.map((source) => (
+          {orderedSources(offer.sources).map((source) => (
             <article className="detail-source-row" key={`${offer.id}-${source.name}`}>
-              <div><strong>{source.name}{source.recommended && <em className="source-recommended">主来源</em>}</strong><small>{source.recommended ? "主来源 · " : "备用来源 · "}{source.note}</small></div>
+              <div><strong>{source.name}<em className="source-kind">{sourceKindLabel(source)}</em>{source.recommended && <em className="source-recommended">Moyusi 推荐</em>}</strong><small>{source.recommended ? "推荐来源 · " : "可切换来源 · "}{source.note}</small></div>
               <span>{source.mode}</span>
               <strong className="source-price">{source.price}</strong>
               <span className="source-latency">{source.latency}</span>

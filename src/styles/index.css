@@ -221,6 +221,7 @@ button { cursor: pointer; }
 .detail-source-row > div strong, .detail-source-row > div small { display: block; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 .detail-source-row > div strong { font-size: 10px; }
 .detail-source-row > div small { margin-top: 4px; color: var(--text-faint); font-size: 7px; }
+.source-kind { display: inline-flex; margin-left: 7px; padding: 2px 4px; border: 1px solid var(--line); border-radius: 4px; color: var(--text-muted); font-size: 6px; font-style: normal; font-weight: 650; vertical-align: 1px; }
 .detail-source-row > span { color: var(--text-muted); font-size: 8px; }
 .source-recommended { display: inline-flex; margin-left: 7px; padding: 2px 4px; border-radius: 4px; background: color-mix(in srgb, var(--brand-red) 9%, var(--surface)); color: var(--brand-red); font-size: 6px; font-style: normal; font-weight: 700; vertical-align: 1px; }
 .detail-source-row .source-price { font: 650 9px/1 ui-monospace, SFMono-Regular, Menlo, monospace; }
