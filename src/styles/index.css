@@ -39,13 +39,17 @@ button { cursor: pointer; }
 .catalog-search input { min-width: 0; flex: 1; border: 0; outline: 0; background: transparent; color: var(--text); font-size: 10px; }
 
 .market-controls { min-height: 48px; display: flex; align-items: center; gap: 9px; padding: 7px 0; border-top: 1px solid var(--line-strong); border-bottom: 1px solid var(--line-strong); }
-.modality-switcher, .filter-tabs, .view-switch { display: inline-flex; align-items: center; gap: 3px; }
-.modality-switcher button, .filter-tabs button, .view-switch button, .precision-trigger { height: 30px; display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 0 9px; border: 1px solid transparent; border-radius: 5px; background: transparent; color: var(--text-muted); font-size: 9px; white-space: nowrap; }
-.modality-switcher button:hover, .filter-tabs button:hover, .view-switch button:hover, .precision-trigger:hover { color: var(--text); background: var(--surface); }
-.modality-switcher button[data-active="true"], .filter-tabs button[data-active="true"], .view-switch button[data-active="true"], .precision-trigger[aria-expanded="true"] { border-color: var(--line); background: var(--surface); color: var(--text); }
+.modality-switcher, .view-switch { display: inline-flex; align-items: center; gap: 3px; }
+.modality-switcher button, .view-switch button, .precision-trigger { height: 30px; display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 0 9px; border: 1px solid transparent; border-radius: 5px; background: transparent; color: var(--text-muted); font-size: 9px; white-space: nowrap; }
+.modality-switcher button:hover, .view-switch button:hover, .precision-trigger:hover { color: var(--text); background: var(--surface); }
+.modality-switcher button[data-active="true"], .view-switch button[data-active="true"], .precision-trigger[aria-expanded="true"] { border-color: var(--line); background: var(--surface); color: var(--text); }
 .modality-switcher button[data-active="true"] svg { color: var(--brand-red); }
 .modality-switcher small { color: var(--text-faint); font: 600 8px/1 ui-monospace, SFMono-Regular, Menlo, monospace; }
 .control-divider { width: 1px; height: 18px; margin: 0 2px; background: var(--line); }
+.kind-select { display: inline-flex; align-items: center; gap: 7px; height: 30px; padding: 0 8px 0 9px; border: 1px solid var(--line); border-radius: 5px; background: var(--surface); color: var(--text-muted); }
+.kind-select > span { color: var(--text-faint); font-size: 8px; white-space: nowrap; }
+.kind-select select { min-width: 82px; height: 26px; padding: 0 20px 0 0; border: 0; outline: 0; background: transparent; color: var(--text); font-size: 9px; }
+.kind-select:focus-within { border-color: var(--line-strong); }
 .precision-trigger b { min-width: 15px; height: 15px; display: grid; place-items: center; border-radius: 8px; background: var(--brand-red); color: #fff; font: 650 8px/1 ui-monospace, SFMono-Regular, Menlo, monospace; }
 .catalog-sort { display: inline-flex; align-items: center; gap: 5px; color: var(--text-faint); font-size: 8px; white-space: nowrap; }
 .catalog-sort select, .facet-select select { height: 28px; padding: 0 23px 0 8px; border: 1px solid var(--line); border-radius: 5px; outline: 0; background: var(--surface); color: var(--text); font-size: 9px; }
@@ -216,8 +220,10 @@ button { cursor: pointer; }
   .workspace-entry { padding: 0 9px; }
   .market-header h1 { font-size: 26px; }
   .market-controls { gap: 6px; }
-  .modality-switcher, .filter-tabs { width: 100%; }
-  .modality-switcher button, .filter-tabs button { flex: 1; padding: 0 6px; }
+  .modality-switcher { width: 100%; }
+  .modality-switcher button { flex: 1; padding: 0 6px; }
+  .kind-select { flex: 1; min-width: 0; }
+  .kind-select select { min-width: 0; flex: 1; }
   .precision-trigger { margin-right: auto; }
   .catalog-sort { margin-left: auto; }
   .precision-panel { align-items: stretch; gap: 8px; }
