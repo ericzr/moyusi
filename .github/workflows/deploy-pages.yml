@@ -44,6 +44,10 @@ jobs:
           mkdir -p dist/market dist/workspace
           cp dist/index.html dist/market/index.html
           cp dist/index.html dist/workspace/index.html
+          for section in overview routing sources deployments tools environment sessions usage billing settings; do
+            mkdir -p "dist/workspace/$section"
+            cp dist/index.html "dist/workspace/$section/index.html"
+          done
           touch dist/.nojekyll
 
       - name: Upload Pages artifact
