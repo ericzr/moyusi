@@ -13,6 +13,7 @@
 - 模型来源级价格、性能和数据策略证据。
 - `ControlPlaneSnapshot`：默认项目、来源授权、脱敏调用 Key、Desktop 设备、费用和 Workspace 资产的只读投影。
 - 控制面命令合同：连接来源、创建调用 Key、保存路由、测试端点、创建迁移计划均返回可轮询的 operation 状态。
+- 控制面 mock command executor 已完成：支持项目校验、来源校验、空权限校验和 Desktop 离线阻断，并将成功/失败结果写入可替换的 operation store。
 
 ## 下一批：控制面命令与发布状态（P0）
 

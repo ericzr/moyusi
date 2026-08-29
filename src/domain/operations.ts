@@ -60,6 +60,33 @@ export type OperationResult<T = unknown> = {
   error?: OperationError;
 };
 
+export type OperationStore = {
+  get(operationId: string): OperationResult | null;
+  put<T>(result: OperationResult<T>): OperationResult<T>;
+};
+
+export function createOperation<T>(command: ControlPlaneCommand["kind"], data?: T, now = new Date().toISOString()): OperationResult<T> {
+  const operationId = `op_${command}_${Date.parse(now).toString(36)}`;
+  return { operationId, command, status: "pending", createdAt: now, updatedAt: now, data };
+}
+
+export function completeOperation<T>(operation: OperationResult<T>, status: Exclude<OperationStatus, "pending">, patch: Pick<OperationResult<T>, "data" | "error"> = {}, updatedAt = new Date().toISOString()): OperationResult<T> {
+  return { ...operation, ...patch, status, updatedAt };
+}
+
+export function createMemoryOperationStore(): OperationStore {
+  const operations = new Map<string, OperationResult>();
+  return {
+    get(operationId) {
+      return operations.get(operationId) ?? null;
+    },
+    put(result) {
+      operations.set(result.operationId, result);
+      return result;
+    },
+  };
+}
+
 export function isTerminalOperation(status: OperationStatus): boolean {
   return status !== "pending";
 }
