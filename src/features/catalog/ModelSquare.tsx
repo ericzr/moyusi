@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import {
   ArrowLeft,
   Check,
+  ChevronDown,
   ChevronRight,
   Code2,
   Cpu,
@@ -134,8 +135,6 @@ export function ModelSquare({ onOpenDetail }: { onOpenDetail: (modelId: string) 
   const offers = catalogResource.data ?? [];
   const catalogState = catalogResource.status;
 
-  const sourceCount = offers.reduce((total, offer) => total + offer.sources.length, 0);
-
   const chooseModality = (next: ModelModality) => {
     setModality(next);
     setFilter("全部供给");
@@ -178,7 +177,7 @@ export function ModelSquare({ onOpenDetail }: { onOpenDetail: (modelId: string) 
   return (
     <main className="market-page">
       <header className="market-header">
-        <div><h1>模型广场</h1><p>先看它适合做什么，再比较价格、速度和稳定性。</p></div>
+        <h1>模型广场</h1>
         <label className="catalog-search">
           <Search size={14} aria-hidden="true" />
           <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="搜索模型、厂商或用途" />
@@ -187,20 +186,18 @@ export function ModelSquare({ onOpenDetail }: { onOpenDetail: (modelId: string) 
 
       <section className="market-controls" aria-label="模型筛选与结果工具栏">
         <div className="market-type-row">
-          <span className="control-row-label">模型类型</span>
           <div className="modality-switcher" aria-label="按生成类型筛选模型">
             {MODALITIES.map(({ id, title, Icon }) => {
               const count = catalogRepository.list({ modality: id }).length;
               return <button key={id} type="button" data-active={modality === id} onClick={() => chooseModality(id)}><Icon size={13} /><span>{title}</span><small>{count}</small></button>;
             })}
           </div>
-          <small>先确定要生成什么，再比较同类模型</small>
         </div>
         <div className="market-control-row">
           <div className="primary-filter-bar" aria-label="常用筛选">
-            <label className="filter-select"><span>开放性</span><select aria-label="供给类型" value={filter} onChange={(event) => setFilter(event.target.value as Filter)}><option value="全部供给">不限</option><option value="闭源 API">闭源 API</option><option value="开放权重">开放权重</option></select></label>
-            <label className="filter-select"><span>供应商</span><select aria-label="供应商" value={provider} onChange={(event) => setProvider(event.target.value)}>{providers.map((item) => <option key={item} value={item}>{item}</option>)}</select></label>
-            <label className="filter-select"><span>计费</span><select aria-label="定价方式" value={billing} onChange={(event) => setBilling(event.target.value as BillingFilter)}><option value="全部定价">全部</option>{BILLING_FILTERS.map((item) => <option key={item} value={item}>{item}</option>)}</select></label>
+            <label className="filter-select"><span>开放性</span><select aria-label="供给类型" value={filter} onChange={(event) => setFilter(event.target.value as Filter)}><option value="全部供给">不限</option><option value="闭源 API">闭源 API</option><option value="开放权重">开放权重</option></select><ChevronDown className="select-chevron" size={12} /></label>
+            <label className="filter-select"><span>供应商</span><select aria-label="供应商" value={provider} onChange={(event) => setProvider(event.target.value)}>{providers.map((item) => <option key={item} value={item}>{item}</option>)}</select><ChevronDown className="select-chevron" size={12} /></label>
+            <label className="filter-select"><span>计费</span><select aria-label="定价方式" value={billing} onChange={(event) => setBilling(event.target.value as BillingFilter)}><option value="全部定价">全部</option>{BILLING_FILTERS.map((item) => <option key={item} value={item}>{item}</option>)}</select><ChevronDown className="select-chevron" size={12} /></label>
             <button className="precision-trigger" type="button" aria-expanded={showPrecision} onClick={() => setShowPrecision((current) => !current)}><SlidersHorizontal size={13} />能力与性能{precisionCount > 0 && <b>{precisionCount}</b>}</button>
           </div>
           <div className="result-tools">
@@ -209,6 +206,7 @@ export function ModelSquare({ onOpenDetail }: { onOpenDetail: (modelId: string) 
               <select aria-label="模型排序" value={sort} onChange={(event) => setSort(event.target.value as CatalogSort)}>
                 {SORT_OPTIONS.filter((option) => modality === "语言" || option.id !== "context").map((option) => <option key={option.id} value={option.id}>{option.label}</option>)}
               </select>
+              <ChevronDown className="select-chevron" size={12} />
             </label>
             <div className="view-switch" aria-label="切换模型呈现方式">
               {VIEWS.map(({ id, label, Icon }) => (
@@ -225,10 +223,11 @@ export function ModelSquare({ onOpenDetail }: { onOpenDetail: (modelId: string) 
 
       <section className="market-browser-layout">
         <section className="catalog-section">
-          <div className="catalog-meta"><span>{offers.length} 个模型 · {sourceCount} 个可切换来源</span><span>{catalogState === "loading" ? "正在更新目录…" : catalogState === "error" ? "目录更新失败，显示上次结果" : "输入 / 输出价格、延迟与成功率均来自最近一次探测"}</span></div>
           <div className="catalog-layout">
-            {view === "compact" && <CompactResults offers={offers} priceUnit={priceUnit} onOpenDetail={(offer) => onOpenDetail(offer.id)} onReset={resetAllFilters} />}
-            {view === "cards" && <CardResults offers={offers} priceUnit={priceUnit} onOpenDetail={(offer) => onOpenDetail(offer.id)} onReset={resetAllFilters} />}
+            {catalogState === "loading" && <div className="catalog-empty">正在更新目录…</div>}
+            {catalogState === "error" && offers.length === 0 && <div className="catalog-empty">目录暂时不可用，请稍后重试。</div>}
+            {catalogState !== "loading" && !(catalogState === "error" && offers.length === 0) && view === "compact" && <CompactResults offers={offers} priceUnit={priceUnit} onOpenDetail={(offer) => onOpenDetail(offer.id)} onReset={resetAllFilters} />}
+            {catalogState !== "loading" && !(catalogState === "error" && offers.length === 0) && view === "cards" && <CardResults offers={offers} priceUnit={priceUnit} onOpenDetail={(offer) => onOpenDetail(offer.id)} onReset={resetAllFilters} />}
           </div>
         </section>
       </section>
@@ -245,7 +244,7 @@ function AdvancedFilterPanel({ modality, precision, setPrecision, onReset }: {
   const selectedCount = precision.tags.length + precision.offerTypes.length + precision.regions.length + Number(precision.maxLatencySeconds !== undefined) + Number(precision.minContextWindow !== undefined) + Number(precision.protocol !== undefined);
   return (
     <section className="advanced-filter-panel" aria-label="更多模型筛选">
-      <div className="advanced-filter-head"><div><strong>{modality}模型的能力与性能</strong><span>这些维度只对当前模型类型生效，切换类型后自动清空。</span></div><button type="button" onClick={onReset} disabled={selectedCount === 0}><RotateCcw size={12} />重置</button></div>
+      <div className="advanced-filter-head"><strong>{modality}模型的能力与性能</strong><button type="button" onClick={onReset} disabled={selectedCount === 0}><RotateCcw size={12} />重置</button></div>
       <div className="advanced-filter-grid">
       <FilterSection title="任务能力">
         {FEATURE_FILTERS[modality].map((tag) => <FacetButton key={tag} active={precision.tags.includes(tag)} onClick={() => setPrecision((current) => ({ ...current, tags: toggleValue(current.tags, tag) }))}>{tag}</FacetButton>)}
@@ -254,8 +253,8 @@ function AdvancedFilterPanel({ modality, precision, setPrecision, onReset }: {
         {ACCESS_MODE_FILTERS.map((item) => <FacetButton key={item.value} active={precision.offerTypes.includes(item.value)} onClick={() => setPrecision((current) => ({ ...current, offerTypes: toggleValue(current.offerTypes, item.value) }))}>{item.label}</FacetButton>)}
       </FilterSection>
       <FilterSection title="性能与兼容">
-        {modality === "语言" && <label className="facet-select"><span>上下文</span><select aria-label="最小上下文" value={precision.minContextWindow ?? ""} onChange={(event) => setPrecision((current) => ({ ...current, minContextWindow: event.target.value ? Number(event.target.value) : undefined }))}>{CONTEXT_FILTERS.map((option) => <option key={option.label} value={option.value ?? ""}>{option.label}</option>)}</select></label>}
-        <label className="facet-select"><span>{modality === "视频" ? "排队" : "响应"}</span><select aria-label="响应上限" value={precision.maxLatencySeconds ?? ""} onChange={(event) => setPrecision((current) => ({ ...current, maxLatencySeconds: event.target.value ? Number(event.target.value) : undefined }))}>{LATENCY_FILTERS[modality].map((option) => <option key={option.label} value={option.value ?? ""}>{option.label}</option>)}</select></label>
+        {modality === "语言" && <label className="facet-select"><span>上下文</span><select aria-label="最小上下文" value={precision.minContextWindow ?? ""} onChange={(event) => setPrecision((current) => ({ ...current, minContextWindow: event.target.value ? Number(event.target.value) : undefined }))}>{CONTEXT_FILTERS.map((option) => <option key={option.label} value={option.value ?? ""}>{option.label}</option>)}</select><ChevronDown className="select-chevron" size={12} /></label>}
+        <label className="facet-select"><span>{modality === "视频" ? "排队" : "响应"}</span><select aria-label="响应上限" value={precision.maxLatencySeconds ?? ""} onChange={(event) => setPrecision((current) => ({ ...current, maxLatencySeconds: event.target.value ? Number(event.target.value) : undefined }))}>{LATENCY_FILTERS[modality].map((option) => <option key={option.label} value={option.value ?? ""}>{option.label}</option>)}</select><ChevronDown className="select-chevron" size={12} /></label>
         {PROTOCOL_FILTERS.map((protocol) => <FacetButton key={protocol} active={precision.protocol === protocol} onClick={() => setPrecision((current) => ({ ...current, protocol: current.protocol === protocol ? undefined : protocol }))}>{protocol}</FacetButton>)}
         {REGION_FILTERS.map((region) => <FacetButton key={region} active={precision.regions.includes(region)} onClick={() => setPrecision((current) => ({ ...current, regions: toggleValue(current.regions, region) }))}>{region}</FacetButton>)}
       </FilterSection>
@@ -398,7 +397,7 @@ function ModelDetail({ offer, onBack, onChooseSource }: { offer: ModelOffer; onB
           <span className="detail-glyph">{offer.kind === "开放权重" ? <Cpu size={20} /> : <Code2 size={20} />}</span>
           <div><span className="detail-badges"><i>{offer.modality}模型</i><i>{offer.kind}</i></span><h1>{offer.name}</h1><code>{offer.modelId}</code></div>
         </div>
-        <p>{offer.summary}。下面只比较会影响选择的价格、速度和稳定性；选择后 Moyusi 会把专业配置放到正确的位置。</p>
+        <p>{offer.summary}</p>
       </header>
 
       <section className="detail-facts" aria-label="模型核心信息">
@@ -422,7 +421,7 @@ function ModelDetail({ offer, onBack, onChooseSource }: { offer: ModelOffer; onB
       </nav>
 
       {detailTab === "overview" && <section className="detail-sources">
-        <div className="detail-section-head"><div><h2>同一模型，选择不同来源</h2><p>模型能力相同，来源会影响价格、速度、稳定性和结算方式。</p></div><span>{offer.sources.length} 个可用来源</span></div>
+        <div className="detail-section-head"><h2>同一模型，选择不同来源</h2><span>{offer.sources.length} 个可用来源</span></div>
         <div className="source-table">
           <div className="source-table-head" aria-hidden="true"><span>模型来源</span><span>怎么付费</span><span>价格</span><span>响应 / 排队</span><span>稳定性</span><span>操作</span></div>
           {offer.sources.map((source) => (
@@ -438,7 +437,7 @@ function ModelDetail({ offer, onBack, onChooseSource }: { offer: ModelOffer; onB
         </div>
         <div className="detail-specs" aria-label="模型规格与能力">
           <div className="detail-spec-card">
-            <div className="detail-section-head"><div><h2>模型规格</h2><p>把会影响接入判断的参数集中在这里。</p></div></div>
+            <div className="detail-section-head"><h2>模型规格</h2></div>
             <div className="spec-grid">
               <div><span>最大输出</span><strong>{offer.maxOutputTokens ? `${Math.round(offer.maxOutputTokens / 1024)}K tokens` : "按任务规格"}</strong></div>
               <div><span>知识截止</span><strong>{offer.knowledgeCutoff ?? "以模型版本为准"}</strong></div>
@@ -449,14 +448,14 @@ function ModelDetail({ offer, onBack, onChooseSource }: { offer: ModelOffer; onB
             </div>
           </div>
           <div className="detail-spec-card">
-            <div className="detail-section-head"><div><h2>能力矩阵</h2><p>能力由目录元数据与来源探测共同确认。</p></div></div>
+            <div className="detail-section-head"><h2>能力矩阵</h2></div>
             <div className="capability-list">{(offer.capabilities ?? offer.tags).map((capability) => <span key={capability}><Check size={11} />{capability}</span>)}</div>
           </div>
         </div>
       </section>}
 
       {detailTab === "performance" && <section className="detail-performance">
-        <div className="detail-section-head"><div><h2>线路性能</h2><p>指标来自最近探测窗口；不同地区和负载下的实际结果会变化。</p></div><span>{offer.performance?.checkedAt ?? "待更新"}</span></div>
+        <div className="detail-section-head"><h2>线路性能</h2><span>{offer.performance?.checkedAt ?? "待更新"}</span></div>
         <div className="performance-table">
           <div className="performance-row performance-head"><span>来源</span><span>吞吐</span><span>p50 / p95</span><span>成功率</span><span>样本 / 地区</span><span>状态</span></div>
           {offer.sources.map((source) => <div className="performance-row" key={`${offer.id}-perf-${source.name}`}><strong>{source.name}</strong><span>{source.throughput ?? "—"}</span><span>{source.latencyP50 && source.latencyP95 ? `${source.latencyP50} / ${source.latencyP95}` : source.latency}</span><span className="source-health"><i />{source.successRate ?? source.health}</span><span>{source.sampleCount ? `${source.sampleCount} · ${source.region ?? "—"}` : source.region ?? "—"}</span><span>{source.recommended ? "主来源" : "备用来源"}</span></div>)}
@@ -465,15 +464,10 @@ function ModelDetail({ offer, onBack, onChooseSource }: { offer: ModelOffer; onB
       </section>}
 
       {detailTab === "api" && <section className="detail-api">
-        <div className="detail-section-head"><div><h2>调用示例</h2><p>复制后只需替换 Moyusi API Key 和模型 ID；不同协议的参数能力会在请求前校验。</p></div><span>{offer.protocol}</span></div>
+        <div className="detail-section-head"><h2>调用示例</h2><span>{offer.protocol}</span></div>
         <div className="api-code-card"><div className="api-code-head"><span>cURL · {offer.protocol}</span><button type="button" onClick={() => navigator.clipboard?.writeText(apiSnippet(offer))}>复制示例</button></div><pre><code>{apiSnippet(offer)}</code></pre></div>
         <div className="api-parameter-grid"><div><strong>认证</strong><span>Authorization: Bearer &lt;MOYUSI_KEY&gt;</span></div><div><strong>模型</strong><span>{offer.modelId}</span></div><div><strong>流式</strong><span>{offer.modality === "语言" ? "支持 SSE" : "按任务状态查询"}</span></div><div><strong>工具</strong><span>{offer.tags.includes("工具调用") ? "支持函数 / MCP 适配" : "以模型能力为准"}</span></div></div>
       </section>}
-
-      <section className="access-principle">
-        <strong>你只需做选择</strong>
-        <span>使用 Moyusi 余额的来源可直接切换；使用自己的账号或服务器时，我们会引导完成一次连接；持续计费的专属算力会在创建前再次确认。</span>
-      </section>
 
       <details className="technical-details">
         <summary>开发者信息</summary>

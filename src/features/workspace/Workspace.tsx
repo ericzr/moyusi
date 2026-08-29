@@ -133,7 +133,7 @@ export function Workspace({
 
       <section className="workspace-content">
         {pendingSelection && <PendingSelection selection={pendingSelection} desktop={desktop} onActivate={onActivateSelection} onProvision={(selection, budgetLimitCny) => { setProvisioningDeployment({ selection, budgetLimitCny }); onClearPendingSelection(); }} onAction={act} />}
-        {section === "overview" && <Overview activeRoute={platform.state.activeRoute} periodCost={platform.billing.periodCostCny} requestCount={platform.billing.requestCount} routePolicy={platform.state.routePolicy} connectedTools={summary?.activeTools ?? platform.state.connectedTools} pendingAttention={summary?.pendingAttention ?? 2} desktop={desktop} onNavigate={onNavigate} onSimulateCall={platform.simulateCall} onAction={act} />}
+        {section === "overview" && <Overview activeRoute={platform.state.activeRoute} periodCost={platform.billing.periodCostCny} requestCount={platform.billing.requestCount} routePolicy={platform.state.routePolicy} connectedTools={summary?.activeTools ?? platform.state.connectedTools} desktop={desktop} onNavigate={onNavigate} onSimulateCall={platform.simulateCall} onAction={act} />}
         {section === "routing" && <Routing activeRoute={platform.state.activeRoute} previousRoute={platform.state.previousRoute} routePolicy={platform.state.routePolicy} desktop={desktop} onBrowseModels={onBrowseModels} onSimulateCall={platform.simulateCall} onRestore={platform.restore} onUpdatePolicy={platform.updateRoutePolicy} onAction={act} />}
         {section === "sources" && <Sources workspace={portableWorkspace} profiles={profiles} onUpdateProfile={updateProfile} onAction={act} />}
         {section === "deployments" && <Deployments provisioning={provisioningDeployment} onBrowseModels={onBrowseModels} onAction={act} />}
@@ -254,21 +254,21 @@ function AccessSetupDialog({ selection, desktop, onClose, onActivate, onProvisio
   );
 }
 
-function PageHead({ title, description, action }: { kicker: string; title: string; description: string; action?: ReactNode }) {
+function PageHead({ title, action }: { title: string; action?: ReactNode }) {
   return (
     <header className="workspace-page-head">
-      <div><h1>{title}</h1><p>{description}</p></div>
+      <h1>{title}</h1>
       {action}
     </header>
   );
 }
 
-function Overview({ activeRoute, periodCost, requestCount, routePolicy, connectedTools, pendingAttention, desktop, onNavigate, onSimulateCall, onAction }: { activeRoute: ActiveRoute; periodCost: number; requestCount: number; routePolicy: RoutePolicy; connectedTools: string[]; pendingAttention: number; desktop: DesktopConnection; onNavigate: (section: WorkspaceSection) => void; onSimulateCall: () => Promise<UsageEvent>; onAction: (message: string) => void }) {
+function Overview({ activeRoute, periodCost, requestCount, routePolicy, connectedTools, desktop, onNavigate, onSimulateCall, onAction }: { activeRoute: ActiveRoute; periodCost: number; requestCount: number; routePolicy: RoutePolicy; connectedTools: string[]; desktop: DesktopConnection; onNavigate: (section: WorkspaceSection) => void; onSimulateCall: () => Promise<UsageEvent>; onAction: (message: string) => void }) {
   const activeTool = toolLabel(activeRoute);
   const desktopReady = desktop.status === "connected" && desktop.localRouter === "ready";
   return (
     <>
-      <PageHead kicker="CONTROL PLANE" title="工作台" description={`模型切换、AI 配置和费用都在这里。今天有 ${pendingAttention} 项需要确认。`} action={<span className="workspace-ready" data-state={desktop.status}><i /> {desktopReady ? "Desktop 已连接" : desktopStatusLabel(desktop)}</span>} />
+      <PageHead title="工作台" action={<span className="workspace-ready" data-state={desktop.status}><i /> {desktopReady ? "Desktop 已连接" : desktopStatusLabel(desktop)}</span>} />
       <div className="workspace-stats">
         <Metric label="本期费用" value={`¥ ${periodCost.toFixed(2)}`} note="含本机演示调用" />
         <Metric label="今日请求" value={String(requestCount)} note="含本机演示调用" />
@@ -348,7 +348,7 @@ function Routing({ activeRoute, previousRoute, routePolicy, desktop, onBrowseMod
 
   return (
     <>
-      <PageHead kicker="ROUTING" title="模型切换" description="选择使用场景和模型来源。切换前会先检查可用性，并保留原配置用于恢复。" action={<button className="button button-primary compact-button" type="button" onClick={onBrowseModels}>从广场选择模型</button>} />
+      <PageHead title="模型切换" action={<button className="button button-primary compact-button" type="button" onClick={onBrowseModels}>从广场选择模型</button>} />
       <DesktopBridge desktop={desktop} />
       <Panel>
         <PanelHead eyebrow="PROVIDER PROFILE" title={`${toolLabel(activeRoute)} · 当前模型`} action={<span className="inline-status"><i />{fallbacks.length} 个备用来源</span>} />
@@ -409,7 +409,7 @@ function Sources({ workspace, profiles, onUpdateProfile, onAction }: { workspace
 
   return (
     <>
-      <PageHead kicker="API & SOURCES" title="来源与凭证" description="先选择来源，再决定哪个工具使用它。自己的密钥只保存在本机，费用由对应平台收取。" action={<div className="head-actions"><button className="button button-quiet compact-button" type="button" onClick={() => setAddOpen(true)}>添加来源</button><button className="button button-primary compact-button" type="button" onClick={() => onAction("调用密钥创建流程已打开；完整值只显示一次")}>创建调用密钥</button></div>} />
+      <PageHead title="来源与凭证" action={<div className="head-actions"><button className="button button-quiet compact-button" type="button" onClick={() => setAddOpen(true)}>添加来源</button><button className="button button-primary compact-button" type="button" onClick={() => onAction("调用密钥创建流程已打开；完整值只显示一次")}>创建调用密钥</button></div>} />
       <div className="provider-source-list">
         <Panel><PanelHead eyebrow="SOURCES" title={`${sources.length} 个来源`} action={<span>按可用性排序</span>} /><div className="provider-table-head"><span>来源</span><span>结算</span><span>协议</span><span>状态</span><span>模型</span><span /></div>{sources.map((source) => <ProviderSourceRow key={source.id} source={source} onSelect={() => setSelectedSource(source)} />)}</Panel>
         <Panel><PanelHead eyebrow="PROVIDER PROFILES" title="工具使用配置" action={<span>{profiles.length} 个 Profile · {routes.length} 条路由</span>} /><div className="provider-profile-list">{profiles.map((profile) => { const source = sources.find((candidate) => candidate.id === profile.sourceId); const route = routes.find((candidate) => candidate.profileId === profile.id); return <div className="provider-profile-row" key={profile.id}><span className="profile-tool-icon"><SquareTerminal size={14} /></span><div><strong>{profile.tool}</strong><small>{profile.model} · {source?.name ?? "来源已移除"} · {route ? `${route.sourceIds.length} 个来源 · ${route.strategy === "auto" ? "自动选择" : route.strategy === "cost" ? "成本优先" : "固定来源"}` : "未建立路由"}</small></div><span className="profile-enabled" data-enabled={profile.enabled}>{profile.enabled ? "已启用" : "未启用"}</span><button type="button" onClick={() => setEditingProfile(profile)}>编辑</button></div>; })}</div><div className="panel-footer"><span>切换来源不会覆盖官方登录</span><button type="button" onClick={() => setEditingProfile(profiles[0] ?? null)}>统一管理</button></div></Panel>
@@ -432,7 +432,7 @@ function ProviderSourceRow({ source, onSelect }: { source: ProviderSource; onSel
 }
 
 function ProviderPresetDialog({ sources, onClose, onChoose }: { sources: ProviderSource[]; onClose: () => void; onChoose: (source: ProviderSource) => void }) {
-  return <div className="access-dialog-backdrop" role="presentation"><section className="access-dialog provider-dialog" role="dialog" aria-modal="true" aria-labelledby="provider-dialog-title"><header><div><span className="access-flow-icon"><PlugZap size={17} /></span><div><h2 id="provider-dialog-title">添加来源</h2><p>先选一个预设，专业协议字段会在连接检查后自动补齐。</p></div></div><button type="button" aria-label="关闭" onClick={onClose}><X size={15} /></button></header><div className="provider-preset-grid">{sources.map((source) => <button type="button" key={source.id} onClick={() => onChoose(source)}><strong>{source.name}</strong><small>{providerModeLabel(source.mode)} · {source.protocol}</small><span>{source.status === "active" ? "可直接使用" : "需要授权"}</span></button>)}<button type="button" className="provider-preset-custom" onClick={() => onChoose({ id: "custom", name: "自定义来源", vendor: "自定义", mode: "endpoint", status: "draft", protocol: "待检测", health: "待检测", modelCount: 0, note: "OpenAI-compatible / Anthropic" })}><strong>自定义来源</strong><small>填写地址后自动探测协议</small><span>高级</span></button></div><footer><button type="button" onClick={onClose}>取消</button></footer></section></div>;
+  return <div className="access-dialog-backdrop" role="presentation"><section className="access-dialog provider-dialog" role="dialog" aria-modal="true" aria-labelledby="provider-dialog-title"><header><div><span className="access-flow-icon"><PlugZap size={17} /></span><h2 id="provider-dialog-title">添加来源</h2></div><button type="button" aria-label="关闭" onClick={onClose}><X size={15} /></button></header><div className="provider-preset-grid">{sources.map((source) => <button type="button" key={source.id} onClick={() => onChoose(source)}><strong>{source.name}</strong><small>{providerModeLabel(source.mode)} · {source.protocol}</small><span>{source.status === "active" ? "可直接使用" : "需要授权"}</span></button>)}<button type="button" className="provider-preset-custom" onClick={() => onChoose({ id: "custom", name: "自定义来源", vendor: "自定义", mode: "endpoint", status: "draft", protocol: "待检测", health: "待检测", modelCount: 0, note: "OpenAI-compatible / Anthropic" })}><strong>自定义来源</strong><small>填写地址后自动探测协议</small><span>高级</span></button></div><footer><button type="button" onClick={onClose}>取消</button></footer></section></div>;
 }
 
 function ProviderDetailDialog({ source, onClose, onConnect }: { source: ProviderSource; onClose: () => void; onConnect: () => void }) {
@@ -473,7 +473,7 @@ function ByokDialog({ provider, connecting, onProviderChange, onClose, onConnect
 function Deployments({ provisioning, onBrowseModels, onAction }: { provisioning: { selection: CatalogSelection; budgetLimitCny: number } | null; onBrowseModels: () => void; onAction: (message: string) => void }) {
   return (
     <>
-      <PageHead kicker="MODELS & DEPLOYMENTS" title="我的模型" description="查看已经使用的开放模型、专属服务器和自己的服务器。成本与运行状态分开显示。" action={<button className="button button-primary compact-button" type="button" onClick={onBrowseModels}>添加开放模型</button>} />
+      <PageHead title="我的模型" action={<button className="button button-primary compact-button" type="button" onClick={onBrowseModels}>添加开放模型</button>} />
       <div className="deployment-list">
         {provisioning && <Deployment icon={CloudCog} name={provisioning.selection.offer.name} type={provisioning.selection.source.name} state="PROVISIONING" details={[provisioning.selection.source.price, `上限 ¥ ${provisioning.budgetLimitCny} / 月`, "创建后开始计费"]} action="查看进度" onClick={() => onAction("正在分配算力；就绪前不会加入活动路由")} />}
         <Deployment icon={Server} name="Qwen Coder" type="共享端点" state="WARM" details={["FP8 · vLLM", "新加坡", "¥ 0.86 / M 起"]} action="查看" onClick={() => onAction("共享端点详情已打开")} />
@@ -514,7 +514,7 @@ function Environment({ workspace, onAction }: { workspace: DemoPortableWorkspace
 
   return (
     <>
-      <PageHead kicker="PORTABLE WORKSPACE" title="AI 配置与迁移" description="统一管理 MCP 工具、Skills 技能、Prompts 提示词、记忆和知识库，并一键迁移到其他 AI 软件。" action={<button className="button button-primary compact-button" type="button" disabled={working} onClick={migrate}>{working ? "正在检查…" : !report || report.state === "applied" ? "生成迁移预览" : "确认并应用"}</button>} />
+      <PageHead title="AI 配置与迁移" action={<button className="button button-primary compact-button" type="button" disabled={working} onClick={migrate}>{working ? "正在检查…" : !report || report.state === "applied" ? "生成迁移预览" : "确认并应用"}</button>} />
       <div className="profile-switcher">
         <button type="button" data-active={profile === "daily"} onClick={() => setProfile("daily")}><span>日常编程</span><small>v12 · 2 个目标</small></button>
         <button type="button" data-active={profile === "team"} onClick={() => setProfile("team")}><span>团队工程</span><small>v4 · 1 个目标</small></button>
@@ -554,7 +554,7 @@ function Tools({ desktop, connectedTools, onAction }: { desktop: DesktopConnecti
   ];
   return (
     <>
-      <PageHead kicker="TOOLS & DEVICES" title="工具与设备" description="查看本机 AI 工具、Desktop Bridge 和路由服务状态。安装、升级与配置写入由 Desktop 执行。" action={<button className="button button-primary compact-button" type="button" onClick={() => onAction("正在请求 Desktop 重新扫描本机工具")}>重新扫描</button>} />
+      <PageHead title="工具与设备" action={<button className="button button-primary compact-button" type="button" onClick={() => onAction("正在请求 Desktop 重新扫描本机工具")}>重新扫描</button>} />
       <DesktopBridge desktop={desktop} />
       <div className="two-column-panels">
         <Panel><PanelHead eyebrow="CONNECTED TOOLS" title={`${connectedTools.length} 个工具已连接`} />{connectedTools.map((tool) => <SourceRow key={tool} name={tool} meta="Moyusi Desktop · 路由已同步" status="已连接" />)}<button className="source-add" type="button" onClick={() => onAction("连接码已生成，请在目标设备打开 Moyusi Desktop")}>连接新设备 <ChevronRight size={13} /></button></Panel>
@@ -573,7 +573,7 @@ function Sessions({ onAction }: { onAction: (message: string) => void }) {
   ];
   return (
     <>
-      <PageHead kicker="SESSION INDEX" title="会话" description="统一索引不同工具中的会话。先恢复可验证的检查点，不承诺厂商隐藏运行时的无损迁移。" action={<button className="button button-quiet compact-button" type="button" onClick={() => onAction("正在请求 Desktop 同步会话索引")}>同步索引</button>} />
+      <PageHead title="会话" action={<button className="button button-quiet compact-button" type="button" onClick={() => onAction("正在请求 Desktop 同步会话索引")}>同步索引</button>} />
       <Panel><div className="session-toolbar"><strong>{sessions.length} 个会话</strong><div><select aria-label="筛选工具"><option>全部工具</option><option>Codex</option><option>Claude Code</option></select><select aria-label="筛选状态"><option>全部状态</option><option>可恢复</option><option>需转换</option></select></div></div><div className="session-list">{sessions.map((session) => <article className="session-row" key={session.title}><span className="session-icon"><MessageSquare size={15} /></span><div><strong>{session.title}</strong><small>{session.tool} · {session.model} · {session.time}</small></div><span className="session-state" data-state={session.state === "可恢复" ? "ok" : "warn"}>{session.state}</span><button type="button" onClick={() => onAction(`${session.title} 的恢复预览已打开`)}>查看</button></article>)}</div></Panel>
       <div className="security-note"><ShieldCheck size={17} /><div><strong>会话正文默认留在本机</strong><p>网页只同步索引、恢复标识和迁移结果；加密正文、隐藏推理状态和不可兼容内容会明确标记为不支持。</p></div></div>
     </>
@@ -588,7 +588,7 @@ function Usage({ events, billing, onAction }: { events: UsageEvent[]; billing: D
   ];
   return (
     <>
-      <PageHead kicker="USAGE & REQUESTS" title="用量与请求" description="查看 Token、延迟、状态、实际来源和回退原因。请求日志是调用证据，账本流水请前往余额与账单。" action={<button className="button button-quiet compact-button" type="button" onClick={() => onAction("用量报表导出已准备")}>导出报表</button>} />
+      <PageHead title="用量与请求" action={<button className="button button-quiet compact-button" type="button" onClick={() => onAction("用量报表导出已准备")}>导出报表</button>} />
       <div className="workspace-stats"><Metric label="今日请求" value={String(billing.requestCount)} note="含本机演示调用" /><Metric label="本期 Token" value="1.31M" note="输入 1.12M · 输出 0.19M" /><Metric label="平均响应" value="2.3s" note="最近 24 小时" /><Metric label="缓存命中" value="74.1%" note="仅统计支持的来源" /></div>
       <Panel><PanelHead eyebrow="REQUEST LOG" title="最近请求" action={<span>默认不保存正文</span>} /><div className="usage-row usage-row-head"><span>请求</span><span>模型 / 来源</span><span>用量</span><span>响应</span><span>费用</span></div>{rows.map((event) => <UsageRow key={event.id} id={event.id} model={event.modelName} route={`${event.sourceName} · ${event.sourceMode}`} tokens={event.usage} latency={event.latency} cost={event.costLabel} />)}</Panel>
     </>
@@ -599,7 +599,7 @@ function Billing({ events, billing, onAction }: { events: UsageEvent[]; billing:
   const bars = [24, 38, 31, 52, 45, 67, 58, 76, 62, 88, 71, 82, 64, 91];
   return (
     <>
-      <PageHead kicker="BALANCE & LEDGER" title="余额与账单" description="Moyusi 余额、充值、扣费和退款单独记账；BYOK 费用只显示外部估算，不会从 Moyusi 余额扣除。" action={<button className="button button-primary compact-button" type="button" onClick={() => onAction("充值流程仅作预览，未发起真实支付")}>充值</button>} />
+      <PageHead title="余额与账单" action={<button className="button button-primary compact-button" type="button" onClick={() => onAction("充值流程仅作预览，未发起真实支付")}>充值</button>} />
       <div className="workspace-stats"><Metric label="可用余额" value={`¥ ${billing.availableBalanceCny.toFixed(2)}`} note="统一余额" /><Metric label="本期费用" value={`¥ ${billing.periodCostCny.toFixed(2)}`} note="含本机演示调用" /><Metric label="外部估算" value={`¥ ${billing.externalEstimateCny.toFixed(2)}`} note="BYOK 不代扣" /><Metric label="今日请求" value={String(billing.requestCount)} note="含本机演示调用" /></div>
       <Panel className="usage-panel"><PanelHead eyebrow="14 DAYS" title="每日费用" action={<strong>¥ {billing.periodCostCny.toFixed(2)}</strong>} /><div className="usage-bars">{bars.map((height, index) => <span key={index} style={{ height: `${height}%` }} title={`第 ${index + 1} 天`} />)}</div></Panel>
       <Panel><PanelHead eyebrow="LEDGER" title="最近账本流水" action={<span>不可变记录</span>} /><div className="ledger-row ledger-row-head"><span>时间</span><span>类型</span><span>说明</span><span>金额</span><span>余额</span></div><LedgerRow time="今天 13:17" type="usage_debit" description="GPT · Coding · Moyusi 稳定线路" amount="- ¥ 0.18" balance={`¥ ${billing.availableBalanceCny.toFixed(2)}`} /><LedgerRow time="今天 12:42" type="topup" description="统一余额充值" amount="+ ¥ 20.00" balance="¥ 80.18" /><LedgerRow time="昨天 18:20" type="usage_debit" description="Qwen Coder · 共享算力" amount="- ¥ 0.07" balance="¥ 60.18" /></Panel>
@@ -610,7 +610,7 @@ function Billing({ events, billing, onAction }: { events: UsageEvent[]; billing:
 function Account({ onAction }: { onAction: (message: string) => void }) {
   return (
     <>
-      <PageHead kicker="ACCOUNT" title="账户" description="登录、安全、设备、会话、通知与隐私都归入工作台，不再设置新的一级页面。" />
+      <PageHead title="账户" />
       <div className="two-column-panels">
         <Panel><PanelHead eyebrow="SECURITY" title="登录与安全" /><SettingRow label="邮箱" value="user@example.com" /><SettingRow label="多因素认证" value="未启用" /><SettingRow label="活跃会话" value="2 个" /><div className="panel-footer"><span>最近登录：上海 · 今天</span><button type="button" onClick={() => onAction("安全设置已打开")}>管理</button></div></Panel>
         <Panel><PanelHead eyebrow="DEVICES" title="设备" /><SourceRow name="MacBook Pro" meta="macOS · Desktop 0.1" status="当前设备" /><SourceRow name="Workstation" meta="Windows · 2 天前在线" status="已连接" /><button className="source-add" type="button" onClick={() => onAction("设备连接码已生成")}>连接新设备 <ChevronRight size={13} /></button></Panel>

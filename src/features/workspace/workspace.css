@@ -17,9 +17,8 @@
 .sidebar-foot small { color: var(--text-faint); font-size: 8px; }
 
 .workspace-content { min-width: 0; padding: 44px clamp(24px, 4vw, 62px) 84px; }
-.workspace-page-head { min-height: 100px; display: flex; align-items: flex-start; justify-content: space-between; gap: 24px; margin-bottom: 22px; }
-.workspace-page-head h1 { margin: 0 0 8px; font-size: clamp(30px, 3.5vw, 40px); font-weight: 540; letter-spacing: -.05em; }
-.workspace-page-head p { max-width: 660px; margin: 0; color: var(--text-muted); font-size: 12px; line-height: 1.75; }
+.workspace-page-head { min-height: 68px; display: flex; align-items: flex-start; justify-content: space-between; gap: 24px; margin-bottom: 18px; }
+.workspace-page-head h1 { margin: 0; font-size: clamp(30px, 3.5vw, 40px); font-weight: 540; letter-spacing: -.05em; }
 .head-actions { display: flex; align-items: center; gap: 7px; }
 .workspace-ready, .inline-status { display: inline-flex; align-items: center; gap: 6px; color: var(--ok); font: 650 8px/1 ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: .08em; }
 .compact-button { min-height: 34px; flex: 0 0 auto; }
