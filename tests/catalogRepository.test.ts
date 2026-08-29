@@ -31,6 +31,31 @@ describe("catalog repository", () => {
     }
   });
 
+  it("filters against structured catalog facts instead of display copy", () => {
+    const results = catalogRepository.list({
+      modality: "语言",
+      tags: ["代码"],
+      offerTypes: ["统一余额"],
+      regions: ["全球"],
+      maxLatencySeconds: 3,
+      minContextWindow: 200_000,
+      protocol: "OpenAI",
+    });
+
+    expect(results.map((offer) => offer.id)).toEqual(expect.arrayContaining(["claude-sonnet", "gpt-coding"]));
+    expect(results.every((offer) => offer.sources.some((source) => source.mode === "统一余额"))).toBe(true);
+  });
+
+  it("sorts by normalized measurements without mutating its input", () => {
+    const languageOffers = catalogRepository.list({ modality: "语言" });
+    const priceSorted = filterCatalog(languageOffers, { sort: "price" });
+    const contextSorted = filterCatalog(languageOffers, { sort: "context" });
+
+    expect(priceSorted[0]?.id).toBe("qwen-coder-open");
+    expect(contextSorted[0]?.id).toBe("gemini-flash");
+    expect(languageOffers[0]?.id).toBe("claude-sonnet");
+  });
+
   it("does not mutate its input collection", () => {
     const sample = catalogRepository.list().slice(0, 2);
     expect(filterCatalog(sample, { query: "___missing___" })).toEqual([]);

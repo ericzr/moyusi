@@ -1,6 +1,9 @@
 export type ModelModality = "语言" | "图片" | "视频";
 export type ModelKind = "闭源 API" | "开放权重";
 export type OfferType = "统一余额" | "BYOK" | "共享算力" | "专属算力" | "自有端点";
+export type ModelRegion = "中国" | "亚太" | "全球";
+export type ModelProtocol = "OpenAI" | "Anthropic" | "Google";
+export type CatalogSort = "recommended" | "price" | "latency" | "context";
 
 export type SupplyOption = {
   name: string;
@@ -25,6 +28,12 @@ export type ModelOffer = {
   specLabel: string;
   specValue: string;
   protocol: string;
+  protocols: ModelProtocol[];
+  /** Normalized fields used only for catalog comparisons; displayed pricing remains source-specific. */
+  priceCny?: number;
+  latencySeconds?: number;
+  contextWindow?: number;
+  regions: ModelRegion[];
   price: string;
   unit: string;
   latency: string;
@@ -38,6 +47,13 @@ export type CatalogFilter = {
   modality?: ModelModality;
   kind?: ModelKind;
   query?: string;
+  tags?: string[];
+  offerTypes?: OfferType[];
+  regions?: ModelRegion[];
+  maxLatencySeconds?: number;
+  minContextWindow?: number;
+  protocol?: ModelProtocol;
+  sort?: CatalogSort;
 };
 
 export type CatalogSelection = {

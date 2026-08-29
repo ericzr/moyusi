@@ -40,13 +40,28 @@ button { cursor: pointer; }
 
 .market-controls { min-height: 48px; display: flex; align-items: center; gap: 9px; padding: 7px 0; border-top: 1px solid var(--line-strong); border-bottom: 1px solid var(--line-strong); }
 .modality-switcher, .filter-tabs, .view-switch { display: inline-flex; align-items: center; gap: 3px; }
-.modality-switcher button, .filter-tabs button, .view-switch button { height: 30px; display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 0 9px; border: 1px solid transparent; border-radius: 5px; background: transparent; color: var(--text-muted); font-size: 9px; white-space: nowrap; }
-.modality-switcher button:hover, .filter-tabs button:hover, .view-switch button:hover { color: var(--text); background: var(--surface); }
-.modality-switcher button[data-active="true"], .filter-tabs button[data-active="true"], .view-switch button[data-active="true"] { border-color: var(--line); background: var(--surface); color: var(--text); }
+.modality-switcher button, .filter-tabs button, .view-switch button, .precision-trigger { height: 30px; display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 0 9px; border: 1px solid transparent; border-radius: 5px; background: transparent; color: var(--text-muted); font-size: 9px; white-space: nowrap; }
+.modality-switcher button:hover, .filter-tabs button:hover, .view-switch button:hover, .precision-trigger:hover { color: var(--text); background: var(--surface); }
+.modality-switcher button[data-active="true"], .filter-tabs button[data-active="true"], .view-switch button[data-active="true"], .precision-trigger[aria-expanded="true"] { border-color: var(--line); background: var(--surface); color: var(--text); }
 .modality-switcher button[data-active="true"] svg { color: var(--brand-red); }
 .modality-switcher small { color: var(--text-faint); font: 600 8px/1 ui-monospace, SFMono-Regular, Menlo, monospace; }
 .control-divider { width: 1px; height: 18px; margin: 0 2px; background: var(--line); }
+.precision-trigger b { min-width: 15px; height: 15px; display: grid; place-items: center; border-radius: 8px; background: var(--brand-red); color: #fff; font: 650 8px/1 ui-monospace, SFMono-Regular, Menlo, monospace; }
+.catalog-sort { display: inline-flex; align-items: center; gap: 5px; color: var(--text-faint); font-size: 8px; white-space: nowrap; }
+.catalog-sort select, .facet-select select { height: 28px; padding: 0 23px 0 8px; border: 1px solid var(--line); border-radius: 5px; outline: 0; background: var(--surface); color: var(--text); font-size: 9px; }
+.catalog-sort select:focus, .facet-select select:focus { border-color: var(--line-strong); }
 .view-switch { margin-left: auto; padding-left: 8px; border-left: 1px solid var(--line); }
+
+.precision-panel { display: flex; align-items: flex-start; flex-wrap: wrap; gap: 9px 18px; padding: 11px 0; border-bottom: 1px solid var(--line-strong); }
+.precision-group { min-height: 28px; display: flex; align-items: center; gap: 8px; }
+.precision-group > span { flex: 0 0 auto; color: var(--text-faint); font-size: 8px; }
+.precision-group > div { display: inline-flex; align-items: center; flex-wrap: wrap; gap: 4px; }
+.facet-button { height: 26px; padding: 0 8px; border: 1px solid var(--line); border-radius: 5px; background: transparent; color: var(--text-muted); font-size: 8px; white-space: nowrap; }
+.facet-button:hover { border-color: var(--line-strong); color: var(--text); }
+.facet-button[data-active="true"] { border-color: var(--text); background: var(--text); color: var(--bg); }
+.precision-reset { height: 28px; display: inline-flex; align-items: center; gap: 5px; margin-left: auto; padding: 0 6px; border: 0; background: transparent; color: var(--text-faint); font-size: 8px; }
+.precision-reset:hover:not(:disabled) { color: var(--text); }
+.precision-reset:disabled { cursor: default; opacity: .4; }
 
 .catalog-section { padding-top: 0; }
 .catalog-meta { min-height: 38px; display: flex; align-items: center; justify-content: space-between; gap: 20px; color: var(--text-faint); font: 580 8px/1 ui-monospace, SFMono-Regular, Menlo, monospace; }
@@ -185,6 +200,7 @@ button { cursor: pointer; }
   .view-switch { margin-left: auto; }
   .catalog-results { overflow-x: auto; }
   .result-header, .offer-list { min-width: 760px; }
+  .precision-panel { gap: 8px 14px; }
   .model-card-grid { grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); }
   .detail-header { grid-template-columns: 1fr; gap: 18px; }
   .detail-facts { grid-template-columns: 1fr 1fr; }
@@ -202,6 +218,12 @@ button { cursor: pointer; }
   .market-controls { gap: 6px; }
   .modality-switcher, .filter-tabs { width: 100%; }
   .modality-switcher button, .filter-tabs button { flex: 1; padding: 0 6px; }
+  .precision-trigger { margin-right: auto; }
+  .catalog-sort { margin-left: auto; }
+  .precision-panel { align-items: stretch; gap: 8px; }
+  .precision-group { width: 100%; justify-content: space-between; }
+  .precision-group > div { justify-content: flex-end; }
+  .precision-reset { margin-left: 0; }
   .view-switch { width: 100%; justify-content: flex-end; border-left: 0; }
   .view-switch button { width: auto; padding: 0 8px; }
   .view-switch button span { display: inline; }

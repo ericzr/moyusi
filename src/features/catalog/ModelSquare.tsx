@@ -10,9 +10,11 @@ import {
   KeyRound,
   LayoutGrid,
   MessageSquareText,
+  RotateCcw,
   Rows3,
   Search,
   Server,
+  SlidersHorizontal,
   Video,
   WalletCards,
   X,
@@ -20,8 +22,12 @@ import {
 import {
   type ModelKind,
   type ModelModality,
+  type ModelProtocol,
   type ModelOffer,
+  type ModelRegion,
   type CatalogSelection,
+  type CatalogSort,
+  type OfferType,
   type SupplyOption,
 } from "../../domain/catalog";
 import { getAccessFlow, sourceActionLabel } from "../../domain/accessPolicy";
@@ -30,6 +36,14 @@ import { catalogRepository } from "../../services/catalogRepository";
 type Filter = "全部供给" | ModelKind;
 type ViewMode = "compact" | "cards";
 type AccessSelection = CatalogSelection;
+type PrecisionFilters = {
+  tags: string[];
+  offerTypes: OfferType[];
+  regions: ModelRegion[];
+  maxLatencySeconds?: number;
+  minContextWindow?: number;
+  protocol?: ModelProtocol;
+};
 
 const MODALITIES: Array<{ id: ModelModality; title: string; Icon: typeof MessageSquareText }> = [
   { id: "语言", title: "语言", Icon: MessageSquareText },
@@ -42,18 +56,63 @@ const VIEWS: Array<{ id: ViewMode; label: string; Icon: typeof Rows3 }> = [
   { id: "cards", label: "卡片", Icon: LayoutGrid },
 ];
 
+const FEATURE_FILTERS: Record<ModelModality, string[]> = {
+  语言: ["代码", "推理", "长文本", "工具调用", "低延迟", "中文", "可部署"],
+  图片: ["文生图", "图像编辑", "参考图", "中文文字", "海报", "可部署"],
+  视频: ["文生视频", "图生视频", "镜头运动", "人物动作", "电影感", "可部署"],
+};
+
+const ACCESS_FILTERS: OfferType[] = ["统一余额", "BYOK", "共享算力", "专属算力", "自有端点"];
+const REGION_FILTERS: ModelRegion[] = ["中国", "亚太", "全球"];
+const PROTOCOL_FILTERS: ModelProtocol[] = ["OpenAI", "Anthropic", "Google"];
+
+const LATENCY_FILTERS = [
+  { value: undefined, label: "不限" },
+  { value: 2, label: "2 秒内" },
+  { value: 5, label: "5 秒内" },
+  { value: 20, label: "20 秒内" },
+];
+
+const CONTEXT_FILTERS = [
+  { value: undefined, label: "不限" },
+  { value: 128_000, label: "128K+" },
+  { value: 200_000, label: "200K+" },
+  { value: 400_000, label: "400K+" },
+];
+
+const SORT_OPTIONS: Array<{ id: CatalogSort; label: string }> = [
+  { id: "recommended", label: "综合推荐" },
+  { id: "price", label: "最低起价" },
+  { id: "latency", label: "最快响应" },
+  { id: "context", label: "最大上下文" },
+];
+
+function toggleValue<T>(values: T[], value: T): T[] {
+  return values.includes(value) ? values.filter((item) => item !== value) : [...values, value];
+}
+
 export function ModelSquare({ onOpenDetail }: { onOpenDetail: (modelId: string) => void }) {
   const [modality, setModality] = useState<ModelModality>("语言");
   const [filter, setFilter] = useState<Filter>("全部供给");
   const [view, setView] = useState<ViewMode>("compact");
   const [query, setQuery] = useState("");
+  const [showPrecision, setShowPrecision] = useState(false);
+  const [precision, setPrecision] = useState<PrecisionFilters>({ tags: [], offerTypes: [], regions: [] });
+  const [sort, setSort] = useState<CatalogSort>("recommended");
   const offers = useMemo(() => {
     return catalogRepository.list({
       modality,
       kind: filter === "全部供给" ? undefined : filter,
       query,
+      tags: precision.tags,
+      offerTypes: precision.offerTypes,
+      regions: precision.regions,
+      maxLatencySeconds: precision.maxLatencySeconds,
+      minContextWindow: precision.minContextWindow,
+      protocol: precision.protocol,
+      sort,
     });
-  }, [filter, modality, query]);
+  }, [filter, modality, precision, query, sort]);
 
   const sourceCount = offers.reduce((total, offer) => total + offer.sources.length, 0);
 
@@ -61,7 +120,17 @@ export function ModelSquare({ onOpenDetail }: { onOpenDetail: (modelId: string) 
     setModality(next);
     setFilter("全部供给");
     setQuery("");
+    setPrecision({ tags: [], offerTypes: [], regions: [] });
   };
+
+  const precisionCount = precision.tags.length
+    + precision.offerTypes.length
+    + precision.regions.length
+    + Number(precision.maxLatencySeconds !== undefined)
+    + Number(precision.minContextWindow !== undefined)
+    + Number(precision.protocol !== undefined);
+
+  const resetPrecision = () => setPrecision({ tags: [], offerTypes: [], regions: [] });
 
   return (
     <main className="market-page">
@@ -86,12 +155,46 @@ export function ModelSquare({ onOpenDetail }: { onOpenDetail: (modelId: string) 
             <button key={item} type="button" data-active={filter === item} onClick={() => setFilter(item)}>{item}</button>
           ))}
         </div>
+        <div className="control-divider" />
+        <button className="precision-trigger" type="button" aria-expanded={showPrecision} onClick={() => setShowPrecision((current) => !current)}>
+          <SlidersHorizontal size={14} aria-hidden="true" />
+          <span>精确筛选</span>
+          {precisionCount > 0 && <b>{precisionCount}</b>}
+        </button>
+        <label className="catalog-sort">
+          <span>排序</span>
+          <select aria-label="模型排序" value={sort} onChange={(event) => setSort(event.target.value as CatalogSort)}>
+            {SORT_OPTIONS.filter((option) => modality === "语言" || option.id !== "context").map((option) => <option key={option.id} value={option.id}>{option.label}</option>)}
+          </select>
+        </label>
         <div className="view-switch" aria-label="切换模型呈现方式">
           {VIEWS.map(({ id, label, Icon }) => (
             <button key={id} type="button" aria-label={label} title={label} data-active={view === id} onClick={() => setView(id)}><Icon size={14} /><span>{label}</span></button>
           ))}
         </div>
       </section>
+
+      {showPrecision && (
+        <section className="precision-panel" aria-label="精确筛选">
+          <FilterGroup label="用途">
+            {FEATURE_FILTERS[modality].map((tag) => <FacetButton key={tag} active={precision.tags.includes(tag)} onClick={() => setPrecision((current) => ({ ...current, tags: toggleValue(current.tags, tag) }))}>{tag}</FacetButton>)}
+          </FilterGroup>
+          <FilterGroup label="接入方式">
+            {ACCESS_FILTERS.map((mode) => <FacetButton key={mode} active={precision.offerTypes.includes(mode)} onClick={() => setPrecision((current) => ({ ...current, offerTypes: toggleValue(current.offerTypes, mode) }))}>{mode}</FacetButton>)}
+          </FilterGroup>
+          <FilterGroup label="服务地区">
+            {REGION_FILTERS.map((region) => <FacetButton key={region} active={precision.regions.includes(region)} onClick={() => setPrecision((current) => ({ ...current, regions: toggleValue(current.regions, region) }))}>{region}</FacetButton>)}
+          </FilterGroup>
+          <FilterGroup label="响应上限">
+            <label className="facet-select"><select aria-label="响应上限" value={precision.maxLatencySeconds ?? ""} onChange={(event) => setPrecision((current) => ({ ...current, maxLatencySeconds: event.target.value ? Number(event.target.value) : undefined }))}>{LATENCY_FILTERS.map((option) => <option key={option.label} value={option.value ?? ""}>{option.label}</option>)}</select></label>
+          </FilterGroup>
+          {modality === "语言" && <FilterGroup label="上下文"><label className="facet-select"><select aria-label="最小上下文" value={precision.minContextWindow ?? ""} onChange={(event) => setPrecision((current) => ({ ...current, minContextWindow: event.target.value ? Number(event.target.value) : undefined }))}>{CONTEXT_FILTERS.map((option) => <option key={option.label} value={option.value ?? ""}>{option.label}</option>)}</select></label></FilterGroup>}
+          <FilterGroup label="接口兼容">
+            {PROTOCOL_FILTERS.map((protocol) => <FacetButton key={protocol} active={precision.protocol === protocol} onClick={() => setPrecision((current) => ({ ...current, protocol: current.protocol === protocol ? undefined : protocol }))}>{protocol}</FacetButton>)}
+          </FilterGroup>
+          <button className="precision-reset" type="button" onClick={resetPrecision} disabled={precisionCount === 0} title="清除精确筛选"><RotateCcw size={13} /><span>清除</span></button>
+        </section>
+      )}
 
       <section className="catalog-section">
         <div className="catalog-meta"><span>{offers.length} 个模型 · {sourceCount} 个可切换来源</span><span>价格、延迟与状态为演示数据</span></div>
@@ -102,6 +205,14 @@ export function ModelSquare({ onOpenDetail }: { onOpenDetail: (modelId: string) 
       </section>
     </main>
   );
+}
+
+function FilterGroup({ label, children }: { label: string; children: React.ReactNode }) {
+  return <div className="precision-group"><span>{label}</span><div>{children}</div></div>;
+}
+
+function FacetButton({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
+  return <button className="facet-button" type="button" data-active={active} aria-pressed={active} onClick={onClick}>{children}</button>;
 }
 
 export function ModelDetailPage({
