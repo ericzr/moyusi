@@ -62,6 +62,20 @@ describe("catalog repository", () => {
     expect(offer?.dataRetention).toContain("不保存");
   });
 
+  it("keeps performance evidence at the supply level", () => {
+    const offer = catalogRepository.getById("claude-sonnet");
+    const [primary, backup, byok] = offer?.sources ?? [];
+
+    expect(primary?.throughput).toBe("61.1 t/s");
+    expect(primary?.latencyP50).toBe("2.8s");
+    expect(primary?.latencyP95).toBe("4.1s");
+    expect(primary?.sampleCount).toBeGreaterThan(0);
+    expect(primary?.dataPolicy).toContain("不保存");
+    expect(backup?.throughput).not.toBe(primary?.throughput);
+    expect(byok?.throughput).toBe("供应商直连");
+    expect(byok?.sampleCount).toBeUndefined();
+  });
+
   it("sorts by normalized measurements without mutating its input", () => {
     const languageOffers = catalogRepository.list({ modality: "语言" });
     const priceSorted = filterCatalog(languageOffers, { sort: "price" });

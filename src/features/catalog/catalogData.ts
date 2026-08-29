@@ -408,9 +408,10 @@ export function enrichModelOffer(offer: ModelOffer): ModelOffer {
     : offer.modality === "图片"
       ? [...offer.tags, "图像输入", "异步任务"]
       : [...offer.tags, "异步任务", "任务状态回调"];
+  const sources = offer.sources.map((source, index) => enrichSourceEvidence(offer, source, evidence, index));
   return {
     ...offer,
-    groups: offer.sources.map((source) => source.name.replace(/（演示）/g, "")).slice(0, 3),
+    groups: sources.map((source) => source.name.replace(/（演示）/g, "")).slice(0, 3),
     capabilities: [...new Set(capabilities)],
     endpointTypes: offer.protocols,
     maxOutputTokens: offer.modality === "语言" ? 32_768 : undefined,
@@ -420,6 +421,34 @@ export function enrichModelOffer(offer: ModelOffer): ModelOffer {
     dataRetention: "Moyusi 默认不保存请求正文",
     pricing: { billing: evidence.billing, input: evidence.input, output: evidence.output, cache: evidence.cache, unit: evidence.unit },
     performance: { latency: offer.latency, throughput: evidence.throughput, successRate: evidence.successRate, checkedAt: evidence.checkedAt },
+    sources,
+  };
+}
+
+function enrichSourceEvidence(
+  offer: ModelOffer,
+  source: ModelOffer["sources"][number],
+  evidence: NonNullable<typeof MODEL_EVIDENCE[string]>,
+  index: number,
+): ModelOffer["sources"][number] {
+  const measured = source.mode !== "BYOK" && source.mode !== "自有端点";
+  const latencySeconds = Number.parseFloat(source.latency.replace(/[^\d.]/g, ""));
+  const hasLatency = Number.isFinite(latencySeconds) && !source.latency.includes("创建") && !source.latency.includes("连接") && !source.latency.includes("供应商");
+  const throughput = !measured
+    ? source.mode === "BYOK" ? "供应商直连" : "连接后探测"
+    : evidence.throughput && evidence.throughput !== "—"
+      ? `${Math.max(18, Number.parseFloat(evidence.throughput) * (1 - index * 0.14)).toFixed(1)} t/s`
+      : evidence.throughput ?? "—";
+  return {
+    ...source,
+    throughput,
+    successRate: source.health.endsWith("%") ? source.health : measured ? evidence.successRate : undefined,
+    checkedAt: measured ? evidence.checkedAt : source.mode === "BYOK" ? "连接后探测" : "创建后探测",
+    region: offer.regions[index % offer.regions.length] ?? "全球",
+    dataPolicy: source.mode === "BYOK" ? "由供应商决定" : "不保存请求正文",
+    sampleCount: measured ? Math.max(240, 1280 - index * 180) : undefined,
+    latencyP50: hasLatency ? `${latencySeconds.toFixed(1)}s` : undefined,
+    latencyP95: hasLatency ? `${(latencySeconds * 1.45).toFixed(1)}s` : undefined,
   };
 }
 

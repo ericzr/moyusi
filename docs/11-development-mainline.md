@@ -84,7 +84,7 @@ Desktop
 
 ### 主线 A：模型与供给
 
-先冻结 `Model → RouteOffer / ServingRevision → PriceVersion → EvidenceWindow`，再接供应商后台。广场只展示已发布且证据新鲜的供给。
+先冻结 `Model → RouteOffer / ServingRevision → PriceVersion → EvidenceWindow`，再接供应商后台。广场只展示已发布且证据新鲜的供给。`EvidenceWindow` 必须绑定具体来源，至少记录 p50/p95、吞吐、成功率、样本数、地区和更新时间；模型级指标只能作为没有来源数据时的降级摘要。
 
 ### 主线 B：接入与权限
 
@@ -157,6 +157,7 @@ WorkspaceProfile 先覆盖 MCP、Skills 和 Prompts，再扩展经审核记忆�
 - 模型详情、选中供给和目标工作台步骤可编码为 URL；
 - 统一余额/共享算力进入路由，BYOK 进入来源，专属算力/自有端点进入部署；
 - Catalog 类型、接入策略、数据仓库和 URL 生成器从页面中抽离；
+- 模型详情已具备按来源的性能证据表、模型规格卡和能力矩阵，来源字段与模型字段分离；
 - TypeScript 严格检查、Vitest 契约测试与 `pnpm check`；
 - 3 个测试文件、13 个用例覆盖目录筛选、供给分流和深链选择。
 

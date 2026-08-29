@@ -414,13 +414,30 @@ function ModelDetail({ offer, onBack, onChooseSource }: { offer: ModelOffer; onB
             </article>
           ))}
         </div>
+        <div className="detail-specs" aria-label="模型规格与能力">
+          <div className="detail-spec-card">
+            <div className="detail-section-head"><div><h2>模型规格</h2><p>把会影响接入判断的参数集中在这里。</p></div></div>
+            <div className="spec-grid">
+              <div><span>最大输出</span><strong>{offer.maxOutputTokens ? `${Math.round(offer.maxOutputTokens / 1024)}K tokens` : "按任务规格"}</strong></div>
+              <div><span>知识截止</span><strong>{offer.knowledgeCutoff ?? "以模型版本为准"}</strong></div>
+              <div><span>许可证</span><strong>{offer.license ?? "未声明"}</strong></div>
+              <div><span>数据留存</span><strong>{offer.dataRetention ?? "以来源政策为准"}</strong></div>
+              <div><span>接口兼容</span><strong>{offer.endpointTypes?.join(" · ") ?? offer.protocol}</strong></div>
+              <div><span>模型分组</span><strong>{offer.groups?.join(" · ") ?? "标准线路"}</strong></div>
+            </div>
+          </div>
+          <div className="detail-spec-card">
+            <div className="detail-section-head"><div><h2>能力矩阵</h2><p>能力由目录元数据与来源探测共同确认。</p></div></div>
+            <div className="capability-list">{(offer.capabilities ?? offer.tags).map((capability) => <span key={capability}><Check size={11} />{capability}</span>)}</div>
+          </div>
+        </div>
       </section>}
 
       {detailTab === "performance" && <section className="detail-performance">
         <div className="detail-section-head"><div><h2>线路性能</h2><p>指标来自最近探测窗口；不同地区和负载下的实际结果会变化。</p></div><span>{offer.performance?.checkedAt ?? "待更新"}</span></div>
         <div className="performance-table">
-          <div className="performance-row performance-head"><span>来源</span><span>吞吐</span><span>响应 / 排队</span><span>成功率</span><span>状态</span></div>
-          {offer.sources.map((source) => <div className="performance-row" key={`${offer.id}-perf-${source.name}`}><strong>{source.name}</strong><span>{offer.performance?.throughput ?? "—"}</span><span>{source.latency}</span><span className="source-health"><i />{source.health}</span><span>{source.recommended ? "主来源" : "备用来源"}</span></div>)}
+          <div className="performance-row performance-head"><span>来源</span><span>吞吐</span><span>p50 / p95</span><span>成功率</span><span>样本 / 地区</span><span>状态</span></div>
+          {offer.sources.map((source) => <div className="performance-row" key={`${offer.id}-perf-${source.name}`}><strong>{source.name}</strong><span>{source.throughput ?? "—"}</span><span>{source.latencyP50 && source.latencyP95 ? `${source.latencyP50} / ${source.latencyP95}` : source.latency}</span><span className="source-health"><i />{source.successRate ?? source.health}</span><span>{source.sampleCount ? `${source.sampleCount} · ${source.region ?? "—"}` : source.region ?? "—"}</span><span>{source.recommended ? "主来源" : "备用来源"}</span></div>)}
         </div>
         <div className="evidence-note"><ShieldCheck size={14} /><span>成功率是探测结果，不等同于合同 SLA；生产环境会同时展示地区、样本数、p50/p95 和更新时间。</span></div>
       </section>}

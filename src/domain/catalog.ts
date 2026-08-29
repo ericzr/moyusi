@@ -29,6 +29,14 @@ export type SupplyOption = {
   health: string;
   note: string;
   recommended?: boolean;
+  throughput?: string;
+  successRate?: string;
+  checkedAt?: string;
+  region?: ModelRegion;
+  dataPolicy?: string;
+  sampleCount?: number;
+  latencyP50?: string;
+  latencyP95?: string;
 };
 
 export type ModelOffer = {
