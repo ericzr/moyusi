@@ -1,6 +1,6 @@
 # Moyusi 开发文档
 
-本文档集把已确认事实、产品决策、工程方案和待确认问题分开。所有竞品价格、模型数量、版本和政策都只代表 2026-08-28 的页面快照，开发时必须再次核验。
+本文档集把已确认事实、产品决策、工程方案和待确认问题分开。所有竞品价格、模型数量、版本和政策都只代表对应调研日期的页面快照，开发时必须再次核验。
 
 ## 建议阅读顺序
 
@@ -21,6 +21,7 @@
 15. [13-web-desktop-boundary.md](./13-web-desktop-boundary.md)：CC Switch 能力拆解、网页与桌面端边界及轻量桥接决策。
 16. [14-stage2-route-control.md](./14-stage2-route-control.md)：typed mock API、目录状态与路由策略控制的 Stage 2 增量。
 17. [15-cc-switch-capability-matrix.md](./15-cc-switch-capability-matrix.md)：逐页核对 CC Switch 截图、能力取舍矩阵与 Moyusi 工作台后续开发主线。
+18. [16-cun-ai-model-market-benchmark.md](./16-cun-ai-model-market-benchmark.md)：CUN.AI 模型广场的筛选、价格、性能与详情结构，以及本轮前端吸收方案。
 
 ## 当前冻结的产品决策
 
