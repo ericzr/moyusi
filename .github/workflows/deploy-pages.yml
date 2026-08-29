@@ -39,7 +39,12 @@ jobs:
         run: pnpm build
 
       - name: Add Pages fallback
-        run: cp dist/index.html dist/404.html && touch dist/.nojekyll
+        run: |
+          cp dist/index.html dist/404.html
+          mkdir -p dist/market dist/workspace
+          cp dist/index.html dist/market/index.html
+          cp dist/index.html dist/workspace/index.html
+          touch dist/.nojekyll
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
