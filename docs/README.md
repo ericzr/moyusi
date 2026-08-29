@@ -22,6 +22,7 @@
 16. [14-stage2-route-control.md](./14-stage2-route-control.md)：typed mock API、目录状态与路由策略控制的 Stage 2 增量。
 17. [15-cc-switch-capability-matrix.md](./15-cc-switch-capability-matrix.md)：逐页核对 CC Switch 截图、能力取舍矩阵与 Moyusi 工作台后续开发主线。
 18. [16-cun-ai-model-market-benchmark.md](./16-cun-ai-model-market-benchmark.md)：CUN.AI 模型广场的筛选、价格、性能与详情结构，以及本轮前端吸收方案。
+19. [17-architecture-mainline-backlog.md](./17-architecture-mainline-backlog.md)：架构优先的主线任务、领域合同、阶段顺序与退出标准。
 
 ## 当前冻结的产品决策
 

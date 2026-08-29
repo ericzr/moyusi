@@ -141,6 +141,8 @@ PriceVersion
 
 `Model` 是用户请求的能力，`RouteOffer` 是如何供应，`PriceVersion` 是某个时间区间如何计费。三者生命周期不同，必须分离。
 
+前端和控制面之间只传输归一化 DTO，不直接暴露供应商 fixture。当前原型已经提供 `PlatformModelGraph` 作为这条边界的 mock 实现：一个模型图同时返回 `ModelIdentity`、`ModelVersion`、`ProviderIdentity`、`RouteOffer`、`PriceVersion` 和 `ProbeWindow`，每个 `RouteOffer` 通过 ID 关联自己的价格版本和性能窗口。后续接入真实 Control Plane 时，页面只替换 repository/API adapter，不改变组件消费方式。
+
 `RouteHealthSample` 是特定探测定义、地区和时间下的观测，不等于 SLA。对外聚合必须携带窗口、样本量和最后更新时间；无新鲜样本时状态为 `unknown/stale`，不能沿用旧的“正常”。
 
 ### Open model serving

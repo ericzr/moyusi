@@ -1,6 +1,8 @@
 import type { CatalogFilter, ModelOffer } from "../domain/catalog";
 import { summarizeWorkspace, type DemoPlatformState, type WorkspaceSummary } from "../domain/demoPlatform";
+import type { PlatformModelGraph, PlatformSnapshot } from "../domain/platform";
 import { catalogRepository } from "./catalogRepository";
+import { platformRepository } from "./platformRepository";
 
 export type ApiSource = "mock";
 
@@ -25,6 +27,16 @@ export async function listCatalogModels(filter: CatalogFilter = {}): Promise<Api
 export async function getCatalogModel(modelId: string): Promise<ApiResponse<ModelOffer | null>> {
   await delay(140);
   return response(catalogRepository.getById(modelId));
+}
+
+export async function getPlatformModelGraph(modelId: string): Promise<ApiResponse<PlatformModelGraph | null>> {
+  await delay(140);
+  return response(platformRepository.getModelGraph(modelId));
+}
+
+export async function getPlatformSnapshot(): Promise<ApiResponse<PlatformSnapshot>> {
+  await delay(100);
+  return response(platformRepository.snapshot());
 }
 
 export async function getWorkspaceSummary(state: DemoPlatformState): Promise<ApiResponse<WorkspaceSummary>> {

@@ -90,6 +90,8 @@ Desktop
 
 把统一余额、BYOK、共享算力、专属算力和自有端点分流成不同流程；形成 Entitlement、API Key、SecretBinding、EndpointConnection 和 DeploymentOrder。
 
+架构先行批次已完成：前端现在通过 `PlatformModelGraph` 消费模型身份、版本、来源、RouteOffer、PriceVersion 与 ProbeWindow 的归一化关系；后续真实 API 只替换 repository adapter，不再让页面直接读取 fixture。
+
 ### 主线 C：桌面路由
 
 先支持 Codex 与 Claude Code 两个目标，完成发现、预览 diff、确认、写入、验证和回滚。路由失败只对已声明的超时、429 和可恢复 5xx 执行回退。

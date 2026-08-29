@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { createInitialDemoState } from "../src/domain/demoPlatform";
-import { getCatalogModel, getWorkspaceSummary, listCatalogModels } from "../src/services/mockApi";
+import { getCatalogModel, getPlatformModelGraph, getPlatformSnapshot, getWorkspaceSummary, listCatalogModels } from "../src/services/mockApi";
 
 describe("typed mock API boundary", () => {
   it("returns catalog data with a source and timestamp", async () => {
@@ -19,5 +19,14 @@ describe("typed mock API boundary", () => {
     const result = await getCatalogModel("gpt-coding");
     expect(result.data?.name).toBe("GPT · Coding");
     expect(await getCatalogModel("missing-model")).toMatchObject({ data: null, source: "mock" });
+  });
+
+  it("exposes normalized platform graph and snapshot through the API boundary", async () => {
+    const graph = await getPlatformModelGraph("claude-sonnet");
+    const snapshot = await getPlatformSnapshot();
+
+    expect(graph.data?.routeOffers[0]?.priceVersionId).toBe(graph.data?.prices[0]?.id);
+    expect(snapshot.data.graphCount).toBeGreaterThan(0);
+    expect(graph.source).toBe("mock");
   });
 });
