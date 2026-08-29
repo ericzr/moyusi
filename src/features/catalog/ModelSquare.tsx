@@ -300,7 +300,7 @@ function CompactResults({ offers, onOpenDetail, onReset }: { offers: ModelOffer[
             </span>
             <span className="offer-use">{offer.tags.slice(0, 2).map((tag) => <small key={tag}>{tag}</small>)}</span>
             <span className="offer-fact"><small>{offer.sources[0]?.recommended ? "主来源" : "可切换来源"}</small><strong>{offer.sources.length} 个来源</strong><em>{offer.sources[0]?.mode ?? offer.offerType}</em></span>
-            <span className="offer-price"><strong>{pricePrimary(offer)}</strong><small>{priceSecondary(offer)}</small></span>
+            <span className="offer-price"><strong>{inputPrice(offer)}</strong><small>{outputPrice(offer)}</small></span>
             <span className="offer-latency"><strong>{offer.performance?.latency ?? offer.latency}</strong><small>{offer.performance?.throughput ?? "吞吐待测"}</small></span>
             <span className="offer-health"><strong><i />{offer.performance?.successRate ?? offer.health}</strong><small>{offer.performance?.checkedAt ?? "24h 窗口"}</small></span>
             <button className="row-action" type="button" onClick={() => onOpenDetail(offer)}>查看<ChevronRight size={12} /></button>
@@ -322,7 +322,7 @@ function CardResults({ offers, onOpenDetail, onReset }: { offers: ModelOffer[]; 
           <code className="model-card-id">{offer.modelId}</code>
           <span className="model-card-summary">{offer.summary}</span>
           <span className="model-card-facts">
-            <span><small>{offer.pricing?.input ? "输入 / 输出" : "单元价格"}</small><strong>{pricePrimary(offer)} · {priceSecondary(offer)}</strong></span>
+            <span><small>{offer.pricing?.input ? "输入 / 输出" : "单元价格"}</small><strong>{inputPrice(offer)} · {outputPrice(offer)}</strong></span>
             <span><small>响应 / 吞吐</small><strong>{offer.performance?.latency ?? offer.latency} · {offer.performance?.throughput ?? "—"}</strong></span>
             <span><small>最近成功率</small><strong className="card-health"><i />{offer.performance?.successRate ?? offer.health}</strong></span>
             <span><small>来源 / 接口</small><strong>{offer.sources.length} 个 · {offer.protocol}</strong></span>
@@ -342,6 +342,15 @@ function priceSecondary(offer: ModelOffer): string {
   if (offer.pricing?.input && offer.pricing.output) return `输出 ${offer.pricing.output}${offer.pricing.unit}`;
   if (offer.pricing?.output) return `${offer.pricing.unit} · ${offer.pricing.billing}`;
   return offer.unit;
+}
+
+function inputPrice(offer: ModelOffer): string {
+  return offer.pricing?.input ? `${offer.pricing.input}${offer.pricing.unit}` : offer.price;
+}
+
+function outputPrice(offer: ModelOffer): string {
+  if (offer.pricing?.output) return `输出 ${offer.pricing.output}${offer.pricing.unit}`;
+  return priceSecondary(offer);
 }
 
 function ModelDetail({ offer, onBack, onChooseSource }: { offer: ModelOffer; onBack: () => void; onChooseSource: (source: SupplyOption) => void }) {
