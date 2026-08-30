@@ -148,6 +148,13 @@ function toggleValue<T>(values: T[], value: T): T[] {
   return values.includes(value) ? values.filter((item) => item !== value) : [...values, value];
 }
 
+function activateCard(event: React.KeyboardEvent<HTMLElement>, onOpen: () => void) {
+  if (event.target !== event.currentTarget) return;
+  if (event.key !== "Enter" && event.key !== " ") return;
+  event.preventDefault();
+  onOpen();
+}
+
 export function ModelSquare({ onOpenDetail }: { onOpenDetail: (modelId: string) => void }) {
   const [modality, setModality] = useState<ModelModality>("语言");
   const [filter, setFilter] = useState<Filter>("全部供给");
@@ -355,7 +362,7 @@ function CompactResults({ offers, priceUnit, onOpenDetail, onReset }: { offers: 
       <div className="result-header" aria-hidden="true"><span>模型</span><span>适合</span><span>可选来源</span><span>价格</span><span>性能</span><span>状态</span><span>操作</span></div>
       <div className="offer-list">
         {offers.map((offer) => (
-          <article className="offer-row" key={offer.id}>
+          <article className="offer-row" key={offer.id} role="link" tabIndex={0} onClick={() => onOpenDetail(offer)} onKeyDown={(event) => activateCard(event, () => onOpenDetail(offer))}>
               <span className="model-identity">
               <span className="model-glyph" aria-hidden="true">{offer.kind === "开放权重" ? <Cpu size={15} /> : <Code2 size={15} />}</span>
               <span><span className="model-title-line"><strong>{offer.name}</strong><small>{offer.family}</small></span><code className="model-id">{offer.modelId}</code><span className="model-summary">{offer.summary}</span></span>
@@ -365,7 +372,7 @@ function CompactResults({ offers, priceUnit, onOpenDetail, onReset }: { offers: 
             <span className="offer-price"><strong>{inputPrice(offer, priceUnit)}</strong><small>{outputPrice(offer, priceUnit)}</small></span>
             <span className="offer-latency"><strong>{offer.performance?.latency ?? offer.latency}</strong><small>{offer.performance?.throughput ?? "吞吐待测"}</small></span>
             <span className="offer-health"><strong><i />{offer.performance?.successRate ?? offer.health}</strong><small>{offer.performance?.checkedAt ?? "24h 窗口"}</small></span>
-            <button className="row-action" type="button" onClick={() => onOpenDetail(offer)}>查看<ChevronRight size={12} /></button>
+            <button className="row-action" type="button" onClick={(event) => { event.stopPropagation(); onOpenDetail(offer); }}>查看<ChevronRight size={12} /></button>
           </article>
         ))}
         {offers.length === 0 && <EmptyResults onReset={onReset} />}
@@ -379,7 +386,7 @@ function CardResults({ offers, priceUnit, onOpenDetail, onReset }: { offers: Mod
   return (
     <div className="model-card-grid">
       {offers.map((offer) => (
-        <article className="model-card" key={offer.id}>
+        <article className="model-card" key={offer.id} role="link" tabIndex={0} onClick={() => onOpenDetail(offer)} onKeyDown={(event) => activateCard(event, () => onOpenDetail(offer))}>
           <span className="model-card-head"><span><strong>{offer.name}</strong><small>{offer.family}</small></span><em>{kindLabel(offer.kind)}</em></span>
           <code className="model-card-id">{offer.modelId}</code>
           <span className="model-card-summary">{offer.summary}</span>
@@ -389,7 +396,7 @@ function CardResults({ offers, priceUnit, onOpenDetail, onReset }: { offers: Mod
             <span><small>最近成功率</small><strong className="card-health"><i />{offer.performance?.successRate ?? offer.health}</strong></span>
             <span><small>来源 / 接口</small><strong>{offer.sources.length} 个 · {offer.protocol}</strong></span>
           </span>
-          <span className="model-card-footer"><small>{sourceSummary(offer)}</small><button type="button" onClick={() => onOpenDetail(offer)}>查看详情<ChevronRight size={12} /></button></span>
+          <span className="model-card-footer"><small>{sourceSummary(offer)}</small><button type="button" onClick={(event) => { event.stopPropagation(); onOpenDetail(offer); }}>查看详情<ChevronRight size={12} /></button></span>
         </article>
       ))}
     </div>
@@ -457,7 +464,7 @@ function ModelDetail({ offer, onBack, onChooseSource }: { offer: ModelOffer; onB
       </nav>
 
       {detailTab === "overview" && <section className="detail-sources">
-        <div className="detail-section-head"><h2>{offer.kind === "开放权重" ? "同一模型，选择不同部署" : "同一模型，选择不同来源"}</h2><span>{offer.sources.length} 个{offer.kind === "开放权重" ? "部署来源" : "可用来源"}</span></div>
+        <div className="detail-section-head"><h2>{offer.kind === "开放权重" ? "全部部署" : "全部供应商"}</h2><span>{offer.sources.length} 个{offer.kind === "开放权重" ? "部署来源" : "可用来源"}</span></div>
         <div className="source-table">
           <div className="source-table-head" aria-hidden="true"><span>{offer.kind === "开放权重" ? "部署来源" : "模型来源"}</span><span>怎么付费</span><span>价格</span><span>响应 / 排队</span><span>稳定性</span><span>操作</span></div>
           {orderedSources(offer.sources).map((source) => (

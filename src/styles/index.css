@@ -121,8 +121,9 @@ button { cursor: pointer; }
 .result-header, .offer-row { display: grid; grid-template-columns: minmax(260px, 2fr) minmax(112px, .78fr) minmax(100px, .68fr) minmax(116px, .72fr) minmax(96px, .62fr) minmax(88px, .55fr) 64px; align-items: center; gap: 12px; }
 .result-header { min-height: 28px; padding: 0 8px; border-bottom: 1px solid var(--line); color: var(--text-faint); font-size: 7px; }
 .offer-list { min-width: 0; }
-.offer-row { width: 100%; min-height: 78px; padding: 10px 8px; border: 0; border-bottom: 1px solid var(--line); background: transparent; text-align: left; }
+.offer-row { width: 100%; min-height: 78px; padding: 10px 8px; border: 0; border-bottom: 1px solid var(--line); background: transparent; text-align: left; cursor: pointer; }
 .offer-row:hover { background: color-mix(in srgb, var(--surface) 70%, transparent); }
+.offer-row:focus-visible, .model-card:focus-visible { outline: 2px solid var(--brand-red); outline-offset: -2px; }
 .model-identity { min-width: 0; display: flex; align-items: center; gap: 10px; }
 .model-identity > span:last-child { min-width: 0; }
 .model-glyph { flex: 0 0 auto; width: 30px; height: 30px; display: grid; place-items: center; border: 1px solid var(--line); border-radius: 7px; background: var(--surface); color: var(--brand-red); }
@@ -147,7 +148,7 @@ button { cursor: pointer; }
 .catalog-empty { padding: 48px 20px; border-bottom: 1px solid var(--line); color: var(--text-faint); text-align: center; font-size: 10px; }
 
 .model-card-grid { min-width: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 10px; }
-.model-card { min-width: 0; min-height: 146px; display: flex; flex-direction: column; padding: 14px; border: 1px solid var(--line); border-radius: var(--radius-md); background: var(--surface); text-align: left; }
+.model-card { min-width: 0; min-height: 146px; display: flex; flex-direction: column; padding: 14px; border: 1px solid var(--line); border-radius: var(--radius-md); background: var(--surface); text-align: left; cursor: pointer; }
 .model-card:hover { border-color: var(--line-strong); background: var(--surface-raised); }
 .model-card-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
 .model-card-head > span { min-width: 0; }
