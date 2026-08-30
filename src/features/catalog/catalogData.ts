@@ -428,6 +428,7 @@ export function enrichModelOffer(offer: ModelOffer): ModelOffer {
       ...source,
       category: sourceCategory(source.mode),
       provider: source.provider ?? source.name,
+      variantId: offer.kind === "开放权重" ? `${offer.id}-standard` : undefined,
       compute: source.mode === "共享算力" || source.mode === "专属算力"
         ? computeProfile(offer, source)
         : undefined,

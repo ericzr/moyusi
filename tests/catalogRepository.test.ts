@@ -83,6 +83,7 @@ describe("catalog repository", () => {
     expect(openModel?.canonicalId).toBe("qwen-coder-open");
     expect(openModel?.variants?.length).toBeGreaterThan(0);
     expect(openModel?.sources.find((source) => source.mode === "共享算力")?.category).toBe("compute");
+    expect(openModel?.sources.find((source) => source.mode === "共享算力")?.variantId).toBe("qwen-coder-open-standard");
     expect(openModel?.sources.find((source) => source.mode === "自有端点")?.category).toBe("endpoint");
     expect(closedModel?.sources.find((source) => source.mode === "BYOK")?.category).toBe("account");
     expect(closedModel?.sources.find((source) => source.mode === "统一余额")?.category).toBe("api");
