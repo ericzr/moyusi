@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { createInitialDemoState } from "../src/domain/demoPlatform";
-import { getCatalogModel, getCatalogSnapshot, getPlatformModelGraph, getPlatformSnapshot, getWorkspaceSummary, listCatalogModels } from "../src/services/mockApi";
+import { appendGatewayAttempt, createGatewayRequest, finalizeGatewayUsage, getCatalogModel, getCatalogSnapshot, getPlatformModelGraph, getPlatformSnapshot, getWorkspaceSummary, settleGatewayRequest, listCatalogModels } from "../src/services/mockApi";
 
 describe("typed mock API boundary", () => {
   it("returns catalog data with a source and timestamp", async () => {
@@ -37,5 +37,40 @@ describe("typed mock API boundary", () => {
     expect(result.data.version.status).toBe("published");
     expect(result.data.version.freshProbeCount).toBeGreaterThan(0);
     expect(result.data.graphs.length).toBe(result.data.version.modelCount);
+  });
+
+  it("keeps gateway request, usage and settlement on one typed API boundary", async () => {
+    const request = await createGatewayRequest({
+      id: "req_api_test",
+      idempotencyKey: "idem_api_test",
+      projectId: "project_default",
+      credentialId: "cred_moyusi_default",
+      requestedModel: "gpt-coding",
+      protocol: "responses",
+    });
+    const attempted = await appendGatewayAttempt(request.data.request.id, {
+      id: "attempt_api_test",
+      modelId: "gpt-coding",
+      routeOfferId: "gpt-coding:route:moyusi-stable-1",
+      priceVersionId: "price_api_test",
+      sourceId: "moyusi-stable",
+    });
+    const metered = await finalizeGatewayUsage(attempted.data.request.id, {
+      id: "usage_api_test",
+      attemptId: "attempt_api_test",
+      sourceEventId: "moyusi:event_api_test",
+      inputUnits: 120,
+      outputUnits: 30,
+      upstreamAmountMinor: 8,
+    });
+    const settled = await settleGatewayRequest(metered.data.request.id, {
+      id: "settlement_api_test",
+      customerAmountMinor: 12,
+      billingScope: "moyusi",
+    });
+
+    expect(request.source).toBe("mock");
+    expect(settled.data.settlement?.status).toBe("settled");
+    expect(settled.data.settlement?.priceVersionId).toBe("price_api_test");
   });
 });

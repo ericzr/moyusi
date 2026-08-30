@@ -5,6 +5,14 @@ import { catalogRepository } from "./catalogRepository";
 import type { ControlPlaneSnapshot } from "../domain/controlPlane";
 import { controlPlaneRepository } from "./controlPlaneRepository";
 import { platformRepository } from "./platformRepository";
+import type {
+  AppendRouteAttemptInput,
+  CreateGatewayRequestInput,
+  FinalizeUsageInput,
+  GatewayRequestRecord,
+  SettleRequestInput,
+} from "../domain/gateway";
+import { gatewayRepository } from "./gatewayRepository";
 
 export type ApiSource = "mock";
 
@@ -54,6 +62,31 @@ export async function getControlPlaneSnapshot(state: DemoPlatformState): Promise
 export async function getWorkspaceSummary(state: DemoPlatformState): Promise<ApiResponse<WorkspaceSummary>> {
   await delay(120);
   return response(summarizeWorkspace(state));
+}
+
+export async function createGatewayRequest(input: CreateGatewayRequestInput): Promise<ApiResponse<GatewayRequestRecord>> {
+  await delay(80);
+  return response(gatewayRepository.createRequest(input));
+}
+
+export async function getGatewayRequest(requestId: string): Promise<ApiResponse<GatewayRequestRecord | null>> {
+  await delay(60);
+  return response(gatewayRepository.getRequest(requestId));
+}
+
+export async function appendGatewayAttempt(requestId: string, input: AppendRouteAttemptInput): Promise<ApiResponse<GatewayRequestRecord>> {
+  await delay(80);
+  return response(gatewayRepository.appendAttempt(requestId, input));
+}
+
+export async function finalizeGatewayUsage(requestId: string, input: FinalizeUsageInput): Promise<ApiResponse<GatewayRequestRecord>> {
+  await delay(80);
+  return response(gatewayRepository.finalizeUsage(requestId, input));
+}
+
+export async function settleGatewayRequest(requestId: string, input: SettleRequestInput): Promise<ApiResponse<GatewayRequestRecord>> {
+  await delay(80);
+  return response(gatewayRepository.settle(requestId, input));
 }
 
 function response<T>(data: T): ApiResponse<T> {
