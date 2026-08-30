@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { createInitialDemoState } from "../src/domain/demoPlatform";
-import { getCatalogModel, getPlatformModelGraph, getPlatformSnapshot, getWorkspaceSummary, listCatalogModels } from "../src/services/mockApi";
+import { getCatalogModel, getCatalogSnapshot, getPlatformModelGraph, getPlatformSnapshot, getWorkspaceSummary, listCatalogModels } from "../src/services/mockApi";
 
 describe("typed mock API boundary", () => {
   it("returns catalog data with a source and timestamp", async () => {
@@ -28,5 +28,14 @@ describe("typed mock API boundary", () => {
     expect(graph.data?.routeOffers[0]?.priceVersionId).toBe(graph.data?.prices[0]?.id);
     expect(snapshot.data.graphCount).toBeGreaterThan(0);
     expect(graph.source).toBe("mock");
+  });
+
+  it("exposes a versioned catalog snapshot through the API boundary", async () => {
+    const result = await getCatalogSnapshot();
+
+    expect(result.source).toBe("mock");
+    expect(result.data.version.status).toBe("published");
+    expect(result.data.version.freshProbeCount).toBeGreaterThan(0);
+    expect(result.data.graphs.length).toBe(result.data.version.modelCount);
   });
 });

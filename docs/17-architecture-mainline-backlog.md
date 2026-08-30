@@ -1,6 +1,6 @@
 # 架构主线任务清单
 
-更新时间：2026-08-29
+更新时间：2026-08-30
 
 本清单用于控制开发顺序。前端可以先用 mock 实现，但每个 mock 都必须对应未来的 Control Plane、Gateway、Desktop 或 Worker 合同；不再新增无法落到系统边界的页面按钮。
 
@@ -15,6 +15,7 @@
 - 控制面命令合同：连接来源、创建调用 Key、保存路由、测试端点、创建迁移计划均返回可轮询的 operation 状态。
 - 控制面 mock command executor 已完成：支持项目校验、来源校验、空权限校验和 Desktop 离线阻断，并将成功/失败结果写入可替换的 operation store。
 - 五类供给接入切片：BYOK 本机授权、自有端点探测、专属算力预算确认与 `DeploymentOrder` 已接入工作台；路由保存统一经过 command executor。
+- `CatalogVersion / CatalogSnapshot`：目录版本具备发布状态、来源、模型/来源数量，以及 fresh、stale、unknown 探测证据计数，并通过 typed mock API 暴露。
 
 ## 下一批：控制面命令与发布状态（P0）
 

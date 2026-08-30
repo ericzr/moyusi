@@ -1,4 +1,6 @@
 import { describe, expect, it } from "vitest";
+import { buildCatalogSnapshot } from "../src/domain/platform";
+import { catalogRepository } from "../src/services/catalogRepository";
 import { platformRepository } from "../src/services/platformRepository";
 
 describe("normalized platform architecture", () => {
@@ -27,9 +29,21 @@ describe("normalized platform architecture", () => {
 
   it("builds a catalog snapshot without exposing fixture implementation", () => {
     const snapshot = platformRepository.snapshot();
-    expect(snapshot.catalogVersion).toBe("demo-2026-08-29");
+    expect(snapshot.catalogVersion).toBe("demo-2026-08-30");
+    expect(snapshot.catalogStatus).toBe("published");
     expect(snapshot.graphCount).toBe(snapshot.models.length);
     expect(snapshot.routeOfferCount).toBeGreaterThan(snapshot.graphCount);
     expect(snapshot.providerCount).toBe(snapshot.routeOfferCount);
+  });
+
+  it("publishes probe freshness counts with a catalog version", () => {
+    const snapshot = platformRepository.catalogSnapshot();
+    const probes = snapshot.graphs.flatMap((graph) => graph.probes);
+
+    expect(snapshot.version.status).toBe("published");
+    expect(snapshot.version.modelCount).toBe(snapshot.graphs.length);
+    expect(snapshot.version.routeOfferCount).toBeGreaterThan(snapshot.version.modelCount);
+    expect(snapshot.version.freshProbeCount + snapshot.version.staleProbeCount + snapshot.version.unknownProbeCount).toBe(probes.length);
+    expect(buildCatalogSnapshot(catalogRepository.list()).version.id).toBe(snapshot.version.id);
   });
 });

@@ -165,13 +165,13 @@ WorkspaceProfile 先覆盖 MCP、Skills 和 Prompts，再扩展经审核记忆�
 - Catalog 类型、接入策略、数据仓库和 URL 生成器从页面中抽离；
 - 模型详情已具备按来源的性能证据表、模型规格卡和能力矩阵，来源字段与模型字段分离；
 - TypeScript 严格检查、Vitest 契约测试与 `pnpm check`；
-- 11 个测试文件、50 个用例覆盖目录筛选、供给分流、命令边界、深链选择和本地演示状态。
+- 11 个测试文件、55 个用例覆盖目录筛选、供给分流、目录版本、命令边界、深链选择和本地演示状态。
 
 ## 7. 下一开发批次
 
 控制面命令合同和五类供给前端分流完成后，下一批继续冻结可替换的系统边界：
 
-1. 加入 `CatalogSnapshot / CatalogVersion` 发布状态，页面只消费可用且证据新鲜的来源；
+1. 用真实模型注册表替换 demo 目录适配器，固定模型工件、revision、许可证和部署版本；
 2. 定义 `ApiRequest → RouteAttempt[] → UsageEvent → Settlement` 网关与计量合同；
 3. 为 request、source event、price version 建立幂等键与失败分类；
 4. 完善 Desktop Bridge 的配置 diff、确认、验证与回滚；

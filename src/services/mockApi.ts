@@ -1,6 +1,6 @@
 import type { CatalogFilter, ModelOffer } from "../domain/catalog";
 import { summarizeWorkspace, type DemoPlatformState, type WorkspaceSummary } from "../domain/demoPlatform";
-import type { PlatformModelGraph, PlatformSnapshot } from "../domain/platform";
+import type { CatalogSnapshot, PlatformModelGraph, PlatformSnapshot } from "../domain/platform";
 import { catalogRepository } from "./catalogRepository";
 import type { ControlPlaneSnapshot } from "../domain/controlPlane";
 import { controlPlaneRepository } from "./controlPlaneRepository";
@@ -39,6 +39,11 @@ export async function getPlatformModelGraph(modelId: string): Promise<ApiRespons
 export async function getPlatformSnapshot(): Promise<ApiResponse<PlatformSnapshot>> {
   await delay(100);
   return response(platformRepository.snapshot());
+}
+
+export async function getCatalogSnapshot(): Promise<ApiResponse<CatalogSnapshot>> {
+  await delay(100);
+  return response(platformRepository.catalogSnapshot());
 }
 
 export async function getControlPlaneSnapshot(state: DemoPlatformState): Promise<ApiResponse<ControlPlaneSnapshot>> {

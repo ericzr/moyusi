@@ -1,4 +1,4 @@
-import { buildModelGraph, type PlatformModelGraph, type PlatformSnapshot } from "../domain/platform";
+import { buildCatalogSnapshot, buildModelGraph, type CatalogSnapshot, type PlatformModelGraph, type PlatformSnapshot } from "../domain/platform";
 import { catalogRepository } from "./catalogRepository";
 
 export const platformRepository = {
@@ -9,15 +9,20 @@ export const platformRepository = {
 
   snapshot(): PlatformSnapshot {
     const offers = catalogRepository.list();
-    const graphs = offers.map(buildModelGraph);
-    const models = graphs.map((graph) => graph.model);
-    const providers = new Set(graphs.flatMap((graph) => graph.providers.map((provider) => provider.id)));
+    const catalog = buildCatalogSnapshot(offers);
+    const models = catalog.graphs.map((graph) => graph.model);
+    const providers = new Set(catalog.graphs.flatMap((graph) => graph.providers.map((provider) => provider.id)));
     return {
-      catalogVersion: "demo-2026-08-29",
+      catalogVersion: catalog.version.id,
+      catalogStatus: catalog.version.status,
       models,
       providerCount: providers.size,
-      routeOfferCount: graphs.reduce((count, graph) => count + graph.routeOffers.length, 0),
-      graphCount: graphs.length,
+      routeOfferCount: catalog.version.routeOfferCount,
+      graphCount: catalog.version.modelCount,
     };
+  },
+
+  catalogSnapshot(): CatalogSnapshot {
+    return buildCatalogSnapshot(catalogRepository.list());
   },
 };

@@ -3,6 +3,20 @@ import type { CatalogBilling, ModelKind, ModelModality, ModelOffer, ModelRegion,
 export type EntityLifecycle = "draft" | "published" | "deprecated" | "offline";
 export type ProviderKind = "managed" | "external" | "compute" | "byok";
 export type EvidenceStatus = "fresh" | "stale" | "unknown";
+export type CatalogVersionStatus = "draft" | "published" | "superseded";
+
+export type CatalogVersion = {
+  id: string;
+  status: CatalogVersionStatus;
+  source: "demo" | "registry";
+  createdAt: string;
+  publishedAt?: string;
+  modelCount: number;
+  routeOfferCount: number;
+  freshProbeCount: number;
+  staleProbeCount: number;
+  unknownProbeCount: number;
+};
 
 export type ModelIdentity = {
   id: string;
@@ -85,10 +99,16 @@ export type PlatformModelGraph = {
 
 export type PlatformSnapshot = {
   catalogVersion: string;
+  catalogStatus: CatalogVersionStatus;
   models: ModelIdentity[];
   providerCount: number;
   routeOfferCount: number;
   graphCount: number;
+};
+
+export type CatalogSnapshot = {
+  version: CatalogVersion;
+  graphs: PlatformModelGraph[];
 };
 
 export function buildModelGraph(offer: ModelOffer): PlatformModelGraph {
@@ -173,6 +193,26 @@ export function buildModelGraph(offer: ModelOffer): PlatformModelGraph {
   });
 
   return { model, version, providers, routeOffers, prices, probes };
+}
+
+export function buildCatalogSnapshot(offers: readonly ModelOffer[], versionId = "demo-2026-08-30"): CatalogSnapshot {
+  const graphs = offers.map(buildModelGraph);
+  const probes = graphs.flatMap((graph) => graph.probes);
+  return {
+    version: {
+      id: versionId,
+      status: "published",
+      source: "demo",
+      createdAt: "2026-08-30T00:00:00.000Z",
+      publishedAt: "2026-08-30T00:00:00.000Z",
+      modelCount: graphs.length,
+      routeOfferCount: graphs.reduce((count, graph) => count + graph.routeOffers.length, 0),
+      freshProbeCount: probes.filter((probe) => probe.status === "fresh").length,
+      staleProbeCount: probes.filter((probe) => probe.status === "stale").length,
+      unknownProbeCount: probes.filter((probe) => probe.status === "unknown").length,
+    },
+    graphs,
+  };
 }
 
 function stableId(value: string): string {
