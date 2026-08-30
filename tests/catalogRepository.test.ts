@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { orderSupplySources } from "../src/features/catalog/ModelSquare";
 import { catalogRepository, filterCatalog } from "../src/services/catalogRepository";
 
 describe("catalog repository", () => {
@@ -97,6 +98,16 @@ describe("catalog repository", () => {
     expect(languageModel?.variants?.[0]?.parameterCount).toBeUndefined();
     expect(imageModel?.specLabel).toBe("输出规格");
     expect(imageModel?.specValue).toBe("最高 2K");
+  });
+
+  it("puts a verified official API before managed and user-owned suppliers", () => {
+    const sources = [
+      { name: "你的 API Key", mode: "BYOK" as const, price: "外部计费", latency: "直连", health: "直连", note: "用户账号" },
+      { name: "Moyusi 稳定线路", mode: "统一余额" as const, price: "¥ 1 / M", latency: "2s", health: "99.9%", note: "平台线路" },
+      { name: "官方渠道", provider: "OpenAI", official: true, mode: "统一余额" as const, price: "¥ 2 / M", latency: "2s", health: "99.9%", note: "官方 API" },
+    ];
+
+    expect(orderSupplySources(sources).map((source) => source.name)).toEqual(["官方渠道", "Moyusi 稳定线路", "你的 API Key"]);
   });
 
   it("sorts by normalized measurements without mutating its input", () => {

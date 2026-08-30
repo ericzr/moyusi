@@ -115,7 +115,8 @@ const SUPPLY_OPTIONS = [
 ];
 
 function sourceKindLabel(source: SupplyOption): string {
-  if (/官方|OpenAI API|Anthropic API|Google AI API/i.test(source.name)) return "官方 API";
+  const sourceText = [source.name, source.provider, source.note].filter(Boolean).join(" ");
+  if (source.official || /官方|official|OpenAI API|Anthropic API|Google AI API/i.test(sourceText)) return "官方 API";
   if (source.mode === "BYOK") return "自己的账号";
   if (source.mode === "共享算力" || source.mode === "专属算力") return "算力部署";
   if (source.mode === "自有端点") return "自有端点";
@@ -128,16 +129,23 @@ function sourceRank(source: SupplyOption): number {
   return label === "官方 API" ? 0 : label === "Moyusi 线路" ? 1 : label === "合作中转" ? 2 : label === "自己的账号" ? 3 : 4;
 }
 
-function orderedSources(sources: SupplyOption[]): SupplyOption[] {
+export function orderSupplySources(sources: SupplyOption[]): SupplyOption[] {
   return sources.map((source, index) => ({ source, index })).sort((a, b) => sourceRank(a.source) - sourceRank(b.source) || Number(Boolean(b.source.recommended)) - Number(Boolean(a.source.recommended)) || a.index - b.index).map(({ source }) => source);
+}
+
+function orderedSources(sources: SupplyOption[]): SupplyOption[] {
+  return orderSupplySources(sources);
+}
+
+function sourceLabelSummary(offer: ModelOffer): string {
+  const labels = [...new Set(orderedSources(offer.sources).slice(0, 3).map(sourceKindLabel))];
+  return labels.length ? `${labels.join(" · ")}${offer.sources.length > labels.length ? ` · +${offer.sources.length - labels.length}` : ""}` : "暂无供应商";
 }
 
 function sourceSummary(offer: ModelOffer): string {
   const sources = orderedSources(offer.sources);
   if (!sources.length) return "暂无来源";
-  const category = offer.kind === "开放权重" ? "部署来源" : "API 来源";
-  const labels = sources.slice(0, 2).map(sourceKindLabel);
-  return `${sources.length} 个${category} · ${labels.join(" · ")}`;
+  return `${sources.length} 个供应商 · ${sourceLabelSummary(offer)}`;
 }
 
 function kindLabel(kind: ModelKind): string {
@@ -368,7 +376,7 @@ function CompactResults({ offers, priceUnit, onOpenDetail, onReset }: { offers: 
               <span><span className="model-title-line"><strong>{offer.name}</strong><small>{offer.family}</small></span><code className="model-id">{offer.modelId}</code><span className="model-summary">{offer.summary}</span></span>
             </span>
             <span className="offer-use">{offer.tags.slice(0, 2).map((tag) => <small key={tag}>{tag}</small>)}</span>
-            <span className="offer-fact"><small>可切换来源</small><strong>{offer.sources.length} 个来源</strong><em>{sourceSummary(offer)}</em></span>
+            <span className="offer-fact"><small>供应商</small><strong>{offer.sources.length} 个供应商</strong><em>{sourceLabelSummary(offer)}</em></span>
             <span className="offer-price"><strong>{inputPrice(offer, priceUnit)}</strong><small>{outputPrice(offer, priceUnit)}</small></span>
             <span className="offer-latency"><strong>{offer.performance?.latency ?? offer.latency}</strong><small>{offer.performance?.throughput ?? "吞吐待测"}</small></span>
             <span className="offer-health"><strong><i />{offer.performance?.successRate ?? offer.health}</strong><small>{offer.performance?.checkedAt ?? "24h 窗口"}</small></span>
@@ -464,12 +472,12 @@ function ModelDetail({ offer, onBack, onChooseSource }: { offer: ModelOffer; onB
       </nav>
 
       {detailTab === "overview" && <section className="detail-sources">
-        <div className="detail-section-head"><h2>{offer.kind === "开放权重" ? "全部部署" : "全部供应商"}</h2><span>{offer.sources.length} 个{offer.kind === "开放权重" ? "部署来源" : "可用来源"}</span></div>
+        <div className="detail-section-head"><h2>全部供应商</h2><span>{offer.sources.length} 个供应商</span></div>
         <div className="source-table">
-          <div className="source-table-head" aria-hidden="true"><span>{offer.kind === "开放权重" ? "部署来源" : "模型来源"}</span><span>怎么付费</span><span>价格</span><span>响应 / 排队</span><span>稳定性</span><span>操作</span></div>
+          <div className="source-table-head" aria-hidden="true"><span>供应商</span><span>怎么付费</span><span>价格</span><span>响应 / 排队</span><span>稳定性</span><span>操作</span></div>
           {orderedSources(offer.sources).map((source) => (
             <article className="detail-source-row" key={`${offer.id}-${source.name}`}>
-              <div><strong>{source.name}<em className="source-kind">{sourceKindLabel(source)}</em>{source.recommended && <em className="source-recommended">Moyusi 推荐</em>}</strong><small>{source.recommended ? "推荐来源 · " : "可切换来源 · "}{sourceSummaryMeta(source, offer.kind)}</small></div>
+              <div><strong>{source.name}<em className="source-kind">{sourceKindLabel(source)}</em>{source.recommended && <em className="source-recommended">Moyusi 推荐</em>}</strong><small>{source.recommended ? "推荐供应商 · " : "候选供应商 · "}{sourceSummaryMeta(source, offer.kind)}</small></div>
               <span>{source.mode}</span>
               <strong className="source-price">{source.price}</strong>
               <span className="source-latency">{source.latency}</span>

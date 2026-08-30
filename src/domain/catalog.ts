@@ -47,6 +47,8 @@ export type SupplyOption = {
   mode: OfferType;
   category?: SupplyCategory;
   provider?: string;
+  /** Marks a verified first-party API channel when the registry provides one. */
+  official?: boolean;
   variantId?: string;
   compute?: ComputeProfile;
   price: string;
