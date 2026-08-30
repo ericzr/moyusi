@@ -411,6 +411,9 @@ export function enrichModelOffer(offer: ModelOffer): ModelOffer {
   const sources = offer.sources.map((source, index) => enrichSourceEvidence(offer, source, evidence, index));
   return {
     ...offer,
+    // The fixture id is the registry identity; display names may be localized
+    // or renamed without creating a new model identity.
+    canonicalId: offer.id,
     groups: sources.map((source) => source.name.replace(/（演示）/g, "")).slice(0, 3),
     capabilities: [...new Set(capabilities)],
     endpointTypes: offer.protocols,
@@ -421,7 +424,51 @@ export function enrichModelOffer(offer: ModelOffer): ModelOffer {
     dataRetention: "Moyusi 默认不保存请求正文",
     pricing: { billing: evidence.billing, input: evidence.input, output: evidence.output, cache: evidence.cache, unit: evidence.unit },
     performance: { latency: offer.latency, throughput: evidence.throughput, successRate: evidence.successRate, checkedAt: evidence.checkedAt },
-    sources,
+    sources: sources.map((source) => ({
+      ...source,
+      category: sourceCategory(source.mode),
+      provider: source.provider ?? source.name,
+      compute: source.mode === "共享算力" || source.mode === "专属算力"
+        ? computeProfile(offer, source)
+        : undefined,
+    })),
+    variants: offer.kind === "开放权重" ? [openVariant(offer)] : undefined,
+  };
+}
+
+function sourceCategory(mode: ModelOffer["sources"][number]["mode"]): NonNullable<ModelOffer["sources"][number]["category"]> {
+  if (mode === "BYOK") return "account";
+  if (mode === "统一余额") return "api";
+  if (mode === "自有端点") return "endpoint";
+  return "compute";
+}
+
+function computeProfile(offer: ModelOffer, source: ModelOffer["sources"][number]): NonNullable<ModelOffer["sources"][number]["compute"]> {
+  const parts = offer.route.split("·").map((part) => part.trim());
+  const noteParts = source.note.split("·").map((part) => part.trim());
+  const framework = parts.find((part) => /vLLM|SGLang|ComfyUI/i.test(part)) ?? noteParts.find((part) => /vLLM|SGLang|ComfyUI/i.test(part));
+  const quantization = parts.find((part) => /FP8|BF16|FP16|GGUF/i.test(part)) ?? noteParts.find((part) => /FP8|BF16|FP16|GGUF/i.test(part));
+  const region = offer.regions.find((candidate) => parts.includes(candidate) || noteParts.includes(candidate));
+  return {
+    provider: source.name,
+    framework,
+    quantization,
+    memory: offer.contextWindow ? `${Math.max(16, Math.round((offer.contextWindow / 128_000) * 16))} GB+ 显存` : undefined,
+    coldStart: source.latency.includes("创建") || source.health === "COLD" ? source.note.match(/冷启动[^·]*/)?.[0] ?? "创建后实测" : "已预热",
+    region,
+  };
+}
+
+function openVariant(offer: ModelOffer): NonNullable<ModelOffer["variants"]>[number] {
+  const routeParts = offer.route.split("·").map((part) => part.trim());
+  return {
+    id: `${offer.id}-standard`,
+    label: "标准部署",
+    // Context/output specs are not parameter counts. Keep the field empty
+    // until the model registry provides a verified parameter size.
+    quantization: routeParts.find((part) => /FP8|BF16|FP16|GGUF/i.test(part)),
+    framework: routeParts.find((part) => /vLLM|SGLang|ComfyUI/i.test(part)),
+    license: offer.license ?? "以模型仓库为准",
   };
 }
 

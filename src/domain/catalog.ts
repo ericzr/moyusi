@@ -21,9 +21,34 @@ export type CatalogPerformance = {
   checkedAt?: string;
 };
 
+export type ModelVariant = {
+  id: string;
+  label: string;
+  parameterCount?: string;
+  quantization?: string;
+  framework?: string;
+  memory?: string;
+  license?: string;
+};
+
+export type SupplyCategory = "api" | "account" | "compute" | "endpoint";
+
+export type ComputeProfile = {
+  provider: string;
+  framework?: string;
+  quantization?: string;
+  memory?: string;
+  coldStart?: string;
+  region?: ModelRegion;
+};
+
 export type SupplyOption = {
   name: string;
   mode: OfferType;
+  category?: SupplyCategory;
+  provider?: string;
+  variantId?: string;
+  compute?: ComputeProfile;
   price: string;
   latency: string;
   health: string;
@@ -41,6 +66,8 @@ export type SupplyOption = {
 
 export type ModelOffer = {
   id: string;
+  /** Stable identity shared by API and deployment variants of the same model. */
+  canonicalId?: string;
   name: string;
   modelId: string;
   family: string;
@@ -75,6 +102,7 @@ export type ModelOffer = {
   health: string;
   meta: string;
   sources: SupplyOption[];
+  variants?: ModelVariant[];
 };
 
 export type CatalogFilter = {

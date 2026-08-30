@@ -188,6 +188,11 @@ button { cursor: pointer; }
 .detail-evidence span, .detail-evidence strong { display: block; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 .detail-evidence span { color: var(--text-faint); font-size: 7px; }
 .detail-evidence strong { margin-top: 5px; font-size: 8px; font-weight: 650; }
+.deployment-overview { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); margin-top: 10px; border: 1px solid var(--line); background: var(--surface); }
+.deployment-overview > div { min-width: 0; min-height: 72px; display: flex; flex-direction: column; justify-content: center; gap: 5px; padding: 11px 13px; border-left: 1px solid var(--line); }
+.deployment-overview > div:first-child { border-left: 0; }
+.deployment-overview span, .deployment-overview small { overflow: hidden; color: var(--text-faint); font-size: 7px; white-space: nowrap; text-overflow: ellipsis; }
+.deployment-overview strong { overflow: hidden; font-size: 10px; font-weight: 660; white-space: nowrap; text-overflow: ellipsis; }
 .detail-tabs { display: flex; gap: 2px; margin-top: 24px; padding: 3px; border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--surface-muted); }
 .detail-tabs button { flex: 1; height: 31px; border: 0; border-radius: 5px; background: transparent; color: var(--text-muted); font-size: 9px; }
 .detail-tabs button[data-active="true"] { background: var(--surface); color: var(--text); box-shadow: 0 1px 2px rgba(0,0,0,.05); }
@@ -296,6 +301,7 @@ button { cursor: pointer; }
   .detail-facts > div:nth-child(3) { border-top: 1px solid var(--line); border-left: 0; }
   .detail-facts > div:nth-child(4) { border-top: 1px solid var(--line); }
   .detail-evidence { grid-template-columns: 1fr 1fr; }
+  .deployment-overview { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .api-parameter-grid { grid-template-columns: 1fr; }
   .detail-specs { grid-template-columns: 1fr; }
   .source-table { overflow-x: auto; }
@@ -332,6 +338,9 @@ button { cursor: pointer; }
   .detail-facts > div { border-top: 1px solid var(--line); border-left: 0; }
   .detail-facts > div:first-child { border-top: 0; }
   .detail-evidence { grid-template-columns: 1fr; }
+  .deployment-overview { grid-template-columns: 1fr; }
+  .deployment-overview > div { min-height: 58px; border-top: 1px solid var(--line); border-left: 0; }
+  .deployment-overview > div:first-child { border-top: 0; }
   .access-summary { grid-template-columns: 1fr; }
   .access-dialog { padding: 15px; }
   .access-dialog footer { align-items: stretch; flex-direction: column-reverse; }

@@ -134,8 +134,10 @@ function orderedSources(sources: SupplyOption[]): SupplyOption[] {
 
 function sourceSummary(offer: ModelOffer): string {
   const sources = orderedSources(offer.sources);
+  if (!sources.length) return "暂无来源";
+  const category = offer.kind === "开放权重" ? "部署来源" : "API 来源";
   const labels = sources.slice(0, 2).map(sourceKindLabel);
-  return labels.length ? `${labels.join(" · ")}${sources.length > 2 ? ` · +${sources.length - 2}` : ""}` : "暂无来源";
+  return `${sources.length} 个${category} · ${labels.join(" · ")}`;
 }
 
 function kindLabel(kind: ModelKind): string {
@@ -446,6 +448,8 @@ function ModelDetail({ offer, onBack, onChooseSource }: { offer: ModelOffer; onB
         <div><span>可用能力</span><strong>{offer.tags.slice(0, 4).join(" · ")}</strong></div>
       </section>
 
+      {offer.kind === "开放权重" && <OpenModelSummary offer={offer} />}
+
       <nav className="detail-tabs" aria-label="模型详情分区">
         <button type="button" data-active={detailTab === "overview"} onClick={() => setDetailTab("overview")}>概览</button>
         <button type="button" data-active={detailTab === "performance"} onClick={() => setDetailTab("performance")}>性能</button>
@@ -453,12 +457,12 @@ function ModelDetail({ offer, onBack, onChooseSource }: { offer: ModelOffer; onB
       </nav>
 
       {detailTab === "overview" && <section className="detail-sources">
-        <div className="detail-section-head"><h2>同一模型，选择不同来源</h2><span>{offer.sources.length} 个可用来源</span></div>
+        <div className="detail-section-head"><h2>{offer.kind === "开放权重" ? "同一模型，选择不同部署" : "同一模型，选择不同来源"}</h2><span>{offer.sources.length} 个{offer.kind === "开放权重" ? "部署来源" : "可用来源"}</span></div>
         <div className="source-table">
-          <div className="source-table-head" aria-hidden="true"><span>模型来源</span><span>怎么付费</span><span>价格</span><span>响应 / 排队</span><span>稳定性</span><span>操作</span></div>
+          <div className="source-table-head" aria-hidden="true"><span>{offer.kind === "开放权重" ? "部署来源" : "模型来源"}</span><span>怎么付费</span><span>价格</span><span>响应 / 排队</span><span>稳定性</span><span>操作</span></div>
           {orderedSources(offer.sources).map((source) => (
             <article className="detail-source-row" key={`${offer.id}-${source.name}`}>
-              <div><strong>{source.name}<em className="source-kind">{sourceKindLabel(source)}</em>{source.recommended && <em className="source-recommended">Moyusi 推荐</em>}</strong><small>{source.recommended ? "推荐来源 · " : "可切换来源 · "}{source.note}</small></div>
+              <div><strong>{source.name}<em className="source-kind">{sourceKindLabel(source)}</em>{source.recommended && <em className="source-recommended">Moyusi 推荐</em>}</strong><small>{source.recommended ? "推荐来源 · " : "可切换来源 · "}{sourceSummaryMeta(source, offer.kind)}</small></div>
               <span>{source.mode}</span>
               <strong className="source-price">{source.price}</strong>
               <span className="source-latency">{source.latency}</span>
@@ -507,6 +511,29 @@ function ModelDetail({ offer, onBack, onChooseSource }: { offer: ModelOffer; onB
       </details>
     </>
   );
+}
+
+function sourceSummaryMeta(source: SupplyOption, kind: ModelKind): string {
+  if (kind === "开放权重" && source.compute) {
+    return [source.compute.quantization, source.compute.framework, source.compute.region].filter(Boolean).join(" · ") || source.note;
+  }
+  return source.note;
+}
+
+function OpenModelSummary({ offer }: { offer: ModelOffer }) {
+  const variant = offer.variants?.[0];
+  const computeSources = offer.sources.filter((source) => source.compute);
+  const primaryLabel = offer.modality === "语言" ? "参数规模" : offer.specLabel;
+  const primaryValue = offer.modality === "语言" ? (variant?.parameterCount ?? "模型卡待核验") : offer.specValue;
+  const deploymentValue = computeSources.length ? `${computeSources.length} 个算力来源` : "等待接入";
+  const deploymentMeta = computeSources.map((source) => source.compute?.provider ?? source.name).join(" · ") || "—";
+  const runtimeValue = [variant?.quantization, variant?.framework].filter(Boolean).join(" · ") || "按来源选择";
+  const runtimeMeta = computeSources.map((source) => source.compute?.region).filter(Boolean).filter((region, index, regions) => regions.indexOf(region) === index).join(" · ") || "部署后显示区域";
+  return <section className="deployment-overview" aria-label="开放模型部署信息">
+    <div><span>{primaryLabel}</span><strong>{primaryValue}</strong><small>{variant?.license ?? "以模型仓库许可证为准"}</small></div>
+    <div><span>可选部署</span><strong>{deploymentValue}</strong><small>{deploymentMeta}</small></div>
+    <div><span>运行配置</span><strong>{runtimeValue}</strong><small>{runtimeMeta}</small></div>
+  </section>;
 }
 
 function apiSnippet(offer: ModelOffer): string {

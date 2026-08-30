@@ -76,6 +76,28 @@ describe("catalog repository", () => {
     expect(byok?.sampleCount).toBeUndefined();
   });
 
+  it("keeps model identity separate from supply and deployment metadata", () => {
+    const openModel = catalogRepository.getById("qwen-coder-open");
+    const closedModel = catalogRepository.getById("claude-sonnet");
+
+    expect(openModel?.canonicalId).toBe("qwen-coder-open");
+    expect(openModel?.variants?.length).toBeGreaterThan(0);
+    expect(openModel?.sources.find((source) => source.mode === "共享算力")?.category).toBe("compute");
+    expect(openModel?.sources.find((source) => source.mode === "自有端点")?.category).toBe("endpoint");
+    expect(closedModel?.sources.find((source) => source.mode === "BYOK")?.category).toBe("account");
+    expect(closedModel?.sources.find((source) => source.mode === "统一余额")?.category).toBe("api");
+  });
+
+  it("does not present image output dimensions as language parameter counts", () => {
+    const imageModel = catalogRepository.getById("flux-kontext");
+    const languageModel = catalogRepository.getById("qwen-coder-open");
+
+    expect(imageModel?.variants?.[0]?.parameterCount).toBeUndefined();
+    expect(languageModel?.variants?.[0]?.parameterCount).toBeUndefined();
+    expect(imageModel?.specLabel).toBe("输出规格");
+    expect(imageModel?.specValue).toBe("最高 2K");
+  });
+
   it("sorts by normalized measurements without mutating its input", () => {
     const languageOffers = catalogRepository.list({ modality: "语言" });
     const priceSorted = filterCatalog(languageOffers, { sort: "price" });
