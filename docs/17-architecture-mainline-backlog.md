@@ -17,6 +17,7 @@
 - 五类供给接入切片：BYOK 本机授权、自有端点探测、专属算力预算确认与 `DeploymentOrder` 已接入工作台；路由保存统一经过 command executor。
 - `CatalogVersion / CatalogSnapshot`：目录版本具备发布状态、来源、模型/来源数量，以及 fresh、stale、unknown 探测证据计数，并通过 typed mock API 暴露。
 - `Gateway metering contract`：`ApiRequest → RouteAttempt[] → UsageEvent → Settlement` 已具备独立领域类型、内存仓储和 typed mock API；请求固定实际模型/线路/价格版本，支持同模型可回退失败分类、流式输出阻断、上游用量幂等和单请求单结算；BYOK/自有端点结算为外部估算。
+- `Protocol adapter contract`：Responses、Chat Completions、Anthropic Messages 已统一为 canonical request；协议端点、`max_tokens`/`max_output_tokens` 映射、必填字段和未支持参数均有显式校验，并通过 typed mock API 暴露。
 
 ## 下一批：控制面命令与发布状态（P0）
 
@@ -35,7 +36,7 @@
 
 ## 再下一批：网关与计量合同（P0）
 
-状态：本地 mock 合同已完成，待接真实协议适配器与账本 Worker。
+状态：本地 mock 合同与协议字段校验已完成，待接真实 HTTP 适配器与账本 Worker。
 
 1. `ApiRequest → RouteAttempt[] → UsageEvent → Settlement` 事件链。
 2. 为 `request_id`、`idempotency_key`、`price_version_id` 和 `source_event_id` 建立幂等约束。

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { createInitialDemoState } from "../src/domain/demoPlatform";
-import { appendGatewayAttempt, createGatewayRequest, finalizeGatewayUsage, getCatalogModel, getCatalogSnapshot, getPlatformModelGraph, getPlatformSnapshot, getWorkspaceSummary, settleGatewayRequest, listCatalogModels } from "../src/services/mockApi";
+import { appendGatewayAttempt, createGatewayRequest, finalizeGatewayUsage, getCatalogModel, getCatalogSnapshot, getPlatformModelGraph, getPlatformSnapshot, getWorkspaceSummary, normalizeGatewayProtocolRequest, settleGatewayRequest, listCatalogModels } from "../src/services/mockApi";
 
 describe("typed mock API boundary", () => {
   it("returns catalog data with a source and timestamp", async () => {
@@ -72,5 +72,15 @@ describe("typed mock API boundary", () => {
     expect(request.source).toBe("mock");
     expect(settled.data.settlement?.status).toBe("settled");
     expect(settled.data.settlement?.priceVersionId).toBe("price_api_test");
+  });
+
+  it("normalizes protocol payloads through the same async API boundary", async () => {
+    const result = await normalizeGatewayProtocolRequest("chat-completions", {
+      model: "gpt-coding",
+      messages: [{ role: "user", content: "hi" }],
+      max_tokens: 32,
+    });
+    expect(result.source).toBe("mock");
+    expect(result.data.maxOutputTokens).toBe(32);
   });
 });

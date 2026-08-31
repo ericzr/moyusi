@@ -13,6 +13,8 @@ import type {
   SettleRequestInput,
 } from "../domain/gateway";
 import { gatewayRepository } from "./gatewayRepository";
+import { normalizeProtocolRequest, type CanonicalGatewayRequest } from "../domain/protocol";
+import type { GatewayProtocol } from "../domain/gateway";
 
 export type ApiSource = "mock";
 
@@ -87,6 +89,11 @@ export async function finalizeGatewayUsage(requestId: string, input: FinalizeUsa
 export async function settleGatewayRequest(requestId: string, input: SettleRequestInput): Promise<ApiResponse<GatewayRequestRecord>> {
   await delay(80);
   return response(gatewayRepository.settle(requestId, input));
+}
+
+export async function normalizeGatewayProtocolRequest(protocol: GatewayProtocol, body: unknown): Promise<ApiResponse<CanonicalGatewayRequest>> {
+  await delay(50);
+  return response(normalizeProtocolRequest(protocol, body));
 }
 
 function response<T>(data: T): ApiResponse<T> {
